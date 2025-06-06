@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
+import { PrivyProviderWrapper } from "@/components/privy-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,8 +24,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <main className="min-h-screen bg-gradient-to-b from-background to-background/80">{children}</main>
-          <Toaster />
+          <PrivyProviderWrapper>
+            <main className="min-h-screen bg-gradient-to-b from-background to-background/80">{children}</main>
+            <Toaster />
+          </PrivyProviderWrapper>
         </ThemeProvider>
       </body>
     </html>
