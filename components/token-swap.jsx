@@ -21,7 +21,7 @@ export function TokenSwap() {
   const [toToken, setToToken] = useState(TOKENS[1].symbol)
   const [amount, setAmount] = useState("")
   const [isSwapping, setIsSwapping] = useState(false)
-  const [txHash, setTxHash] = useState<string | null>(null)
+  const [txHash, setTxHash] = useState(null)
 
   // Mock exchange rate
   const exchangeRate = fromToken === "PEPE" ? 0.000005 : 200000
