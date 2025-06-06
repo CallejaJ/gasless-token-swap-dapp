@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { usePrivy } from "@privy-io/react-auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowDownUp, Loader2, ExternalLink } from "lucide-react"
-import { useBiconomy } from "@/hooks/use-biconomy"
 import { useToast } from "@/hooks/use-toast"
 
 const TOKENS = [
@@ -16,7 +16,7 @@ const TOKENS = [
 ]
 
 export function TokenSwap() {
-  const { isConnected, smartAccount, executeTransaction } = useBiconomy()
+  const { authenticated } = usePrivy()
   const { toast } = useToast()
 
   const [fromToken, setFromToken] = useState(TOKENS[0].symbol)
@@ -35,20 +35,17 @@ export function TokenSwap() {
   }
 
   const handleSwap = async () => {
-    if (!isConnected || !smartAccount || !amount || Number.parseFloat(amount) <= 0) return
+    if (!authenticated || !amount || Number.parseFloat(amount) <= 0) return
 
     setIsSwapping(true)
     setTxHash(null)
 
     try {
-      // In a real app, you would create the actual swap transaction here
-      // This is a mock implementation
-      const mockTxHash = await executeTransaction({
-        fromToken,
-        toToken,
-        amount: Number.parseFloat(amount),
-      })
+      // Mock transaction execution
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
+      // Generate mock transaction hash
+      const mockTxHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`
       setTxHash(mockTxHash)
 
       toast({
@@ -67,7 +64,7 @@ export function TokenSwap() {
     }
   }
 
-  if (!isConnected) {
+  if (!authenticated) {
     return null
   }
 
@@ -75,7 +72,7 @@ export function TokenSwap() {
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Swap Tokens</CardTitle>
-        <CardDescription>Swap tokens without paying gas fees</CardDescription>
+        <CardDescription>Swap tokens without paying gas fees using Privy + Smart Accounts</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -152,7 +149,7 @@ export function TokenSwap() {
           )}
         </Button>
 
-        <div className="text-center text-sm text-muted-foreground">Gas fees paid by sponsor</div>
+        <div className="text-center text-sm text-muted-foreground">Gas fees sponsored by Privy + Smart Accounts</div>
 
         {txHash && (
           <a
