@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { usePrivy } from "@privy-io/react-auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,7 +15,6 @@ const TOKENS = [
 ]
 
 export function TokenSwap() {
-  const { authenticated } = usePrivy()
   const { toast } = useToast()
 
   const [fromToken, setFromToken] = useState(TOKENS[0].symbol)
@@ -35,7 +33,7 @@ export function TokenSwap() {
   }
 
   const handleSwap = async () => {
-    if (!authenticated || !amount || Number.parseFloat(amount) <= 0) return
+    if (!amount || Number.parseFloat(amount) <= 0) return
 
     setIsSwapping(true)
     setTxHash(null)
@@ -64,15 +62,11 @@ export function TokenSwap() {
     }
   }
 
-  if (!authenticated) {
-    return null
-  }
-
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Swap Tokens</CardTitle>
-        <CardDescription>Swap tokens without paying gas fees using Privy + Smart Accounts</CardDescription>
+        <CardDescription>Swap tokens without paying gas fees using Smart Accounts</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -149,7 +143,7 @@ export function TokenSwap() {
           )}
         </Button>
 
-        <div className="text-center text-sm text-muted-foreground">Gas fees sponsored by Privy + Smart Accounts</div>
+        <div className="text-center text-sm text-muted-foreground">Gas fees sponsored by Smart Accounts</div>
 
         {txHash && (
           <a

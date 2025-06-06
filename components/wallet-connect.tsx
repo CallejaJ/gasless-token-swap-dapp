@@ -1,61 +1,48 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { usePrivy, useWallets } from "@privy-io/react-auth"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { formatAddress } from "@/lib/utils"
 import { ExternalLink, Wallet } from "lucide-react"
 
 export function WalletConnect() {
-  const { ready, authenticated, user, login, logout } = usePrivy()
-  const { wallets } = useWallets()
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [isConnected, setIsConnected] = useState(false)
+  const [address, setAddress] = useState("")
   const [balances, setBalances] = useState<{ [key: string]: string }>({})
-  const [isLoadingBalances, setIsLoadingBalances] = useState(false)
 
-  const wallet = wallets[0] // Get the first connected wallet
+  const handleConnect = async () => {
+    setIsConnecting(true)
 
-  useEffect(() => {
-    const fetchBalances = async () => {
-      if (!authenticated || !wallet) return
+    try {
+      // Simulamos la conexión
+      await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      setIsLoadingBalances(true)
-      try {
-        // Mock balances - in a real app, you would fetch actual token balances
-        setBalances({
-          PEPE: "1000.00",
-          USDC: "500.00",
-        })
-      } catch (error) {
-        console.error("Error fetching balances:", error)
-      } finally {
-        setIsLoadingBalances(false)
-      }
+      // Generamos una dirección aleatoria
+      const mockAddress = `0x${Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}`
+
+      setAddress(mockAddress)
+      setBalances({
+        PEPE: "1000.00",
+        USDC: "500.00",
+      })
+      setIsConnected(true)
+    } catch (error) {
+      console.error("Error connecting wallet:", error)
+    } finally {
+      setIsConnecting(false)
     }
-
-    if (authenticated && wallet) {
-      fetchBalances()
-    }
-  }, [authenticated, wallet])
-
-  // Show loading state while Privy is initializing
-  if (!ready) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-48" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </Card>
-    )
   }
 
-  // Show connect button if not authenticated
-  if (!authenticated) {
+  const handleDisconnect = () => {
+    setIsConnected(false)
+    setAddress("")
+    setBalances({})
+  }
+
+  // Show connect button if not connected
+  if (!isConnected) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -63,11 +50,11 @@ export function WalletConnect() {
             <Wallet className="h-5 w-5" />
             Connect Wallet
           </CardTitle>
-          <CardDescription>Connect your wallet to start swapping tokens without gas fees using Privy</CardDescription>
+          <CardDescription>Connect your wallet to start swapping tokens without gas fees</CardDescription>
         </CardHeader>
         <CardFooter>
-          <Button onClick={login} className="w-full">
-            Connect with Privy
+          <Button onClick={handleConnect} className="w-full" disabled={isConnecting}>
+            {isConnecting ? "Connecting..." : "Connect Wallet"}
           </Button>
         </CardFooter>
       </Card>
@@ -82,60 +69,46 @@ export function WalletConnect() {
             <Wallet className="h-5 w-5" />
             Connected Wallet
           </span>
-          <Button variant="outline" size="sm" onClick={logout}>
+          <Button variant="outline" size="sm" onClick={handleDisconnect}>
             Disconnect
           </Button>
         </CardTitle>
-        <CardDescription>Your wallet connected via Privy on Base Sepolia</CardDescription>
+        <CardDescription>Your wallet is connected on Base Sepolia</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* User Info */}
+          {/* Wallet Info */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">User ID</span>
-              <span className="text-sm font-mono">{formatAddress(user?.id || "")}</span>
+              <span className="text-sm text-muted-foreground">Smart Account</span>
+              <a
+                href={`https://sepolia.basescan.org/address/${address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-sm font-mono hover:text-primary"
+              >
+                {formatAddress(address)}
+                <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
 
-            {wallet && (
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Wallet Address</span>
-                <a
-                  href={`https://sepolia.basescan.org/address/${wallet.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-sm font-mono hover:text-primary"
-                >
-                  {formatAddress(wallet.address)}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            )}
-
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Wallet Type</span>
-              <span className="text-sm capitalize">{wallet?.walletClientType || "Unknown"}</span>
+              <span className="text-sm text-muted-foreground">Account Type</span>
+              <span className="text-sm">Smart Account (ERC-4337)</span>
             </div>
           </div>
 
           {/* Token Balances */}
           <div className="space-y-2">
             <div className="text-sm text-muted-foreground">Token Balances</div>
-            {isLoadingBalances ? (
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-full" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(balances).map(([token, amount]) => (
-                  <div key={token} className="flex justify-between items-center p-2 border rounded-md">
-                    <span className="font-medium">{token}</span>
-                    <span>{amount}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(balances).map(([token, amount]) => (
+                <div key={token} className="flex justify-between items-center p-2 border rounded-md">
+                  <span className="font-medium">{token}</span>
+                  <span>{amount}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </CardContent>
