@@ -2,16 +2,16 @@
 
 import type React from "react";
 import { PrivyProvider } from "@privy-io/react-auth";
-import { WagmiProvider } from "@privy-io/wagmi";
+import { WagmiProvider, createConfig } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { baseSepolia } from "viem/chains";
+import { sepolia } from "viem/chains";
 import { http } from "viem";
-import { createConfig } from "@privy-io/wagmi";
 
-const config = createConfig({
-  chains: [baseSepolia],
+// Configuración de Wagmi para Sepolia
+const wagmiConfig = createConfig({
+  chains: [sepolia],
   transports: {
-    [baseSepolia.id]: http(),
+    [sepolia.id]: http(),
   },
 });
 
@@ -62,13 +62,13 @@ export function PrivyProviderWrapper({
           createOnLogin: "users-without-wallets",
           requireUserPasswordOnCreate: false,
         },
-        defaultChain: baseSepolia,
-        supportedChains: [baseSepolia],
+        defaultChain: sepolia,
+        supportedChains: [sepolia],
         loginMethods: ["email", "wallet"],
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={config}>{children}</WagmiProvider>
+        <WagmiProvider config={wagmiConfig}>{children}</WagmiProvider>
       </QueryClientProvider>
     </PrivyProvider>
   );

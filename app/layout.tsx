@@ -7,13 +7,15 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { PrivyProviderWrapper } from "@/components/privy-provider";
 import { setupConsoleFilter } from "@/lib/console-filter";
 
+import { AppInitializer } from "@/components/app-initializer";
+
 // Setup console filter to hide analytics errors in development
 setupConsoleFilter();
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Gasless Token Swap | Base Sepolia",
+  title: "Gasless Token Swap | Sepolia Testnet",
   description:
     "Swap ERC-20 tokens without holding ETH using Smart Accounts and sponsored gas",
   keywords: [
@@ -24,6 +26,9 @@ export const metadata: Metadata = {
     "Account Abstraction",
     "EIP-4337",
   ],
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

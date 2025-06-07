@@ -76,7 +76,7 @@ export function WalletConnect() {
           </Button>
         </CardTitle>
         <CardDescription>
-          Your wallet is connected on Base Sepolia
+          Your wallet is connected on Sepolia Testnet
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -96,7 +96,7 @@ export function WalletConnect() {
                   Wallet Address
                 </span>
                 <a
-                  href={`https://sepolia.basescan.org/address/${walletAddress}`}
+                  href={`https://sepolia.etherscan.io/address/${walletAddress}`}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='flex items-center gap-1 text-sm font-mono hover:text-primary'
@@ -113,7 +113,7 @@ export function WalletConnect() {
                   Smart Account
                 </span>
                 <a
-                  href={`https://sepolia.basescan.org/address/${smartAccountAddress}`}
+                  href={`https://sepolia.etherscan.io/address/${smartAccountAddress}`}
                   target='_blank'
                   rel='noopener noreferrer'
                   className='flex items-center gap-1 text-sm font-mono hover:text-primary'
