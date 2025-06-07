@@ -60,17 +60,11 @@ export function PrivyProviderWrapper({
         },
         embeddedWallets: {
           createOnLogin: "users-without-wallets",
+          requireUserPasswordOnCreate: false,
         },
         defaultChain: baseSepolia,
         supportedChains: [baseSepolia],
         loginMethods: ["email", "wallet"],
-        externalWallets: {
-          metamask: {},
-          coinbaseWallet: {},
-          walletConnect: {},
-        },
-        // Disable analytics to avoid CORS issues in development
-        _disableAnalytics: process.env.NODE_ENV === "development",
       }}
     >
       <QueryClientProvider client={queryClient}>
