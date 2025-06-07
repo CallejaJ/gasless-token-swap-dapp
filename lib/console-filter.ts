@@ -1,4 +1,4 @@
-// Filter out Privy analytics errors in development
+// Filter out Privy analytics errors and chunk load errors in development
 export function setupConsoleFilter() {
   if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
     const originalError = console.error;
@@ -10,6 +10,8 @@ export function setupConsoleFilter() {
       "auth.privy.io/api/v1/analytics",
       "POST https://auth.privy.io/api/v1/analytics_events",
       "Access to fetch at 'https://auth.privy.io/api/v1/analytics_events'",
+      "ChunkLoadError",
+      "Loading chunk",
     ];
 
     // Override console.error

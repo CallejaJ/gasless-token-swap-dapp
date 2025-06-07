@@ -9,6 +9,8 @@ import { setupConsoleFilter } from "@/lib/console-filter";
 
 import { AppInitializer } from "@/components/app-initializer";
 
+import { ErrorBoundary } from "@/components/error-boundary";
+
 // Setup console filter to hide analytics errors in development
 setupConsoleFilter();
 
