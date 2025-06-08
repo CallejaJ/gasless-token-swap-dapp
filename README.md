@@ -6,7 +6,7 @@
 
 ## 🎯 Overview
 
-A decentralized application (dApp) that enables users to **swap ERC-20 tokens without holding any ETH** by leveraging **Smart Accounts (EIP-4337)** and **sponsored gas payments**. Built on Base Sepolia testnet.
+A decentralized application (dApp) that enables users to **swap ERC-20 tokens without holding any ETH** by leveraging **Smart Accounts (EIP-4337)** and **sponsored gas payments**. Built on Sepolia testnet.
 
 ## ✨ Features
 
