@@ -1,46 +1,92 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Zap, CheckCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Zap, Shield, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { useSmartAccount } from "@/hooks/use-smart-account";
 
 export function PaymasterStatus() {
+  const { isSmartWalletReady, smartAccountAddress, error } = useSmartAccount();
+
+  if (error) {
+    return (
+      <Card className='mb-4 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'>
+        <CardContent className='p-4'>
+          <div className='flex items-center gap-3'>
+            <AlertCircle className='h-5 w-5 text-red-600 dark:text-red-400' />
+            <div>
+              <p className='text-sm font-medium text-red-800 dark:text-red-200'>
+                Smart Wallet Error
+              </p>
+              <p className='text-xs text-red-600 dark:text-red-400'>{error}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isSmartWalletReady) {
+    return (
+      <Card className='mb-4 border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20'>
+        <CardContent className='p-4'>
+          <div className='flex items-center gap-3'>
+            <Loader2 className='h-5 w-5 animate-spin text-yellow-600' />
+            <div>
+              <p className='text-sm font-medium text-yellow-800 dark:text-yellow-200'>
+                Initializing Smart Wallet
+              </p>
+              <p className='text-xs text-yellow-600 dark:text-yellow-400'>
+                Setting up gasless transactions...
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className='w-full mb-6'>
-      <CardHeader>
-        <CardTitle className='flex items-center gap-2'>
-          <Zap className='h-5 w-5' />
-          Paymaster Status
-        </CardTitle>
-        <CardDescription>Sponsored gas for all transactions</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card className='mb-4 border-green-200 dark:border-green-800 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20'>
+      <CardContent className='p-4'>
         <div className='space-y-3'>
+          {/* Header */}
           <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium'>Status</span>
-            <Badge variant='default' className='bg-green-600'>
-              <CheckCircle className='h-3 w-3 mr-1' />
-              Active
-            </Badge>
+            <div className='flex items-center gap-2'>
+              <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
+              <span className='font-semibold text-green-800 dark:text-green-200'>
+                Smart Wallet Ready
+              </span>
+            </div>
+            <span className='bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 px-2 py-1 rounded text-xs font-medium'>
+              ERC-4337
+            </span>
           </div>
-          <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium'>Sponsor</span>
-            <span className='text-sm'>Abstract Protocol</span>
+
+          {/* Features */}
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-3 text-xs'>
+            <div className='flex items-center gap-2 text-green-700 dark:text-green-300'>
+              <Zap className='h-4 w-4' />
+              <span>Gas optimization</span>
+            </div>
+            <div className='flex items-center gap-2 text-blue-700 dark:text-blue-300'>
+              <Shield className='h-4 w-4' />
+              <span>Enhanced security</span>
+            </div>
+            <div className='flex items-center gap-2 text-purple-700 dark:text-purple-300'>
+              <CheckCircle className='h-4 w-4' />
+              <span>Smart features</span>
+            </div>
           </div>
-          <div className='flex items-center justify-between'>
-            <span className='text-sm font-medium'>Gas Coverage</span>
-            <span className='text-sm font-bold text-green-600'>100%</span>
-          </div>
-          <div className='text-xs text-muted-foreground mt-4'>
-            All transaction fees are automatically covered. You don't need any
-            ETH in your wallet.
-          </div>
+
+          {/* Smart Account Info */}
+          {smartAccountAddress && (
+            <div className='pt-2 border-t border-green-200 dark:border-green-700'>
+              <p className='text-xs text-green-600 dark:text-green-400'>
+                Smart Account: {smartAccountAddress.slice(0, 6)}...
+                {smartAccountAddress.slice(-4)}
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

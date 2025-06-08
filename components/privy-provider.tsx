@@ -2,21 +2,9 @@
 
 import type React from "react";
 import { PrivyProvider } from "@privy-io/react-auth";
-import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
-import { WagmiProvider, createConfig } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { sepolia } from "viem/chains";
-import { http } from "viem";
-
-// Configuración de Wagmi para Sepolia
-const wagmiConfig = createConfig({
-  chains: [sepolia],
-  transports: {
-    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL),
-  },
-});
-
-const queryClient = new QueryClient();
+import { useState } from "react";
 
 export function PrivyProviderWrapper({
   children,
@@ -24,7 +12,18 @@ export function PrivyProviderWrapper({
   children: React.ReactNode;
 }) {
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-  const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
+
+  // Crear QueryClient en el cliente para evitar problemas de hidratación
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000,
+          },
+        },
+      })
+  );
 
   // Si no hay App ID configurado, mostrar mensaje de error
   if (!appId || appId === "your-app-id-here") {
@@ -35,73 +34,41 @@ export function PrivyProviderWrapper({
             Privy App ID Required
           </h2>
           <p className='text-muted-foreground'>
-            Please configure your Privy App ID in the .env.local file to use
-            wallet authentication.
+            Please configure your Privy App ID in the .env.local file.
           </p>
-          <div className='text-sm text-left bg-muted p-4 rounded font-mono space-y-1'>
-            <p>1. Create account at https://dashboard.privy.io</p>
-            <p>2. Create a new app</p>
-            <p>3. Enable Smart Wallets in the dashboard</p>
-            <p>4. Copy your App ID</p>
-            <p>5. Add to .env.local:</p>
-            <p className='text-primary'>
-              NEXT_PUBLIC_PRIVY_APP_ID=your-app-id-here
-            </p>
-          </div>
         </div>
       </div>
     );
   }
 
-  // Configuración para Smart Wallets
-  const smartWalletsConfig = alchemyKey
-    ? {
-        [sepolia.id]: {
-          bundlerUrl: `https://eth-sepolia.g.alchemy.com/v2/${alchemyKey}`,
-        },
-      }
-    : {};
-
   return (
-    <PrivyProvider
-      appId={appId}
-      config={{
-        appearance: {
-          theme: "dark",
-          accentColor: "#676FFF",
-        },
-        embeddedWallets: {
-          createOnLogin: "users-without-wallets",
-          requireUserPasswordOnCreate: false,
-        },
-        defaultChain: sepolia,
-        supportedChains: [sepolia],
-        loginMethods: ["email", "wallet", "sms"],
-      }}
-    >
-      <SmartWalletsProvider config={smartWalletsConfig}>
-        <QueryClientProvider client={queryClient}>
-          <WagmiProvider config={wagmiConfig}>
-            {/* Mostrar advertencia si falta Alchemy */}
-            {!alchemyKey && (
-              <div className='bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 p-3'>
-                <div className='text-center text-sm text-yellow-800 dark:text-yellow-200'>
-                  ⚠️ Smart Wallets require Alchemy API key.
-                  <a
-                    href='https://alchemy.com'
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='underline ml-1'
-                  >
-                    Get one here
-                  </a>
-                </div>
-              </div>
-            )}
-            {children}
-          </WagmiProvider>
-        </QueryClientProvider>
-      </SmartWalletsProvider>
-    </PrivyProvider>
+    <QueryClientProvider client={queryClient}>
+      <PrivyProvider
+        appId={appId}
+        config={{
+          appearance: {
+            theme: "dark",
+            accentColor: "#676FFF",
+            showWalletLoginFirst: false,
+          },
+          embeddedWallets: {
+            createOnLogin: "users-without-wallets",
+            requireUserPasswordOnCreate: false,
+          },
+          defaultChain: sepolia,
+          supportedChains: [sepolia],
+          loginMethods: ["email", "wallet", "sms", "google"],
+        }}
+      >
+        {/* Banner informativo sobre Smart Wallets */}
+        <div className='bg-gradient-to-r from-green-500/10 via-blue-500/10 to-purple-500/10 border-b border-green-200 dark:border-green-800 p-3'>
+          <div className='text-center text-sm text-green-800 dark:text-green-200'>
+            ⚡ <strong>Smart Wallets enabled!</strong> Gas-free transactions
+            coming soon.
+          </div>
+        </div>
+        {children}
+      </PrivyProvider>
+    </QueryClientProvider>
   );
 }
