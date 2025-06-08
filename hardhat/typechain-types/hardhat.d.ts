@@ -69,6 +69,10 @@ declare module "hardhat/types/runtime" {
       name: "SimpleDEX",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.SimpleDEX__factory>;
+    getContractFactory(
+      name: "SimpleDEXOptimized",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SimpleDEXOptimized__factory>;
 
     getContractAt(
       name: "Ownable",
@@ -140,6 +144,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.SimpleDEX>;
+    getContractAt(
+      name: "SimpleDEXOptimized",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SimpleDEXOptimized>;
 
     deployContract(
       name: "Ownable",
@@ -197,6 +206,10 @@ declare module "hardhat/types/runtime" {
       name: "SimpleDEX",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.SimpleDEX>;
+    deployContract(
+      name: "SimpleDEXOptimized",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SimpleDEXOptimized>;
 
     deployContract(
       name: "Ownable",
@@ -268,6 +281,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.SimpleDEX>;
+    deployContract(
+      name: "SimpleDEXOptimized",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SimpleDEXOptimized>;
 
     // default types
     getContractFactory(

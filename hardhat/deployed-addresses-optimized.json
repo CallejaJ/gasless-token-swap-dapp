@@ -1,0 +1,16 @@
+{
+  "pepeToken": "0xCf0d3a20149dFD96aE8f4757632826F53c1A89AA",
+  "usdcToken": "0xe7e525b9917638eE57469EeB37b54f0780b1C8F2",
+  "simpleDEXOptimized": "0x308C6e1BCa2f2939B973Ff2c977cedCE13875f43",
+  "deployer": "0x8E8382DE55fd90552DFf74C7Ea2D5FBFe2A5bE26",
+  "network": "sepolia",
+  "version": "optimized",
+  "deployedAt": "2025-06-08T20:10:37.322Z",
+  "gasOptimizations": [
+    "packed-structs",
+    "custom-errors",
+    "simplified-math",
+    "efficient-transfers",
+    "optimized-storage"
+  ]
+}

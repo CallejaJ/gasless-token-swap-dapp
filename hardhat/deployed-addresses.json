@@ -1,0 +1,13 @@
+{
+  "pepeToken": "0xdc76f5eBBC0DcB0D9E219664f95455e0f12ae434",
+  "usdcToken": "0xa41B4257Dd26FECe842f676328E48D26811D3A70",
+  "simpleDEX": "0x76909d9bAA5de18D02B2E1327eC8F5ec88F7bB6D",
+  "deployer": "0x8E8382DE55fd90552DFf74C7Ea2D5FBFe2A5bE26",
+  "network": "sepolia",
+  "deployedAt": "2025-06-08T15:35:59.900Z",
+  "hasLiquidity": true,
+  "liquidityAmounts": {
+    "pepe": "100000.0",
+    "usdc": "500.0"
+  }
+}

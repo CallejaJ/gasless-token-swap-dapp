@@ -13,6 +13,7 @@ import {
 import { formatAddress } from "@/lib/utils";
 import { ExternalLink, Wallet, Loader2, RefreshCw } from "lucide-react";
 import { useSmartAccount } from "@/hooks/use-smart-account";
+import { FaucetButton } from "@/components/faucet-button";
 
 export function WalletConnect() {
   const { ready, authenticated, user, login, logout } = usePrivy();
@@ -185,8 +186,8 @@ export function WalletConnect() {
             </div>
           </div>
 
-          {/* Token Balances */}
-          <div className='space-y-2'>
+          {/* Token Balances with Faucet Buttons */}
+          <div className='space-y-3'>
             <div className='text-sm text-muted-foreground'>Token Balances</div>
             {isLoadingBalances ? (
               <div className='flex items-center justify-center p-4'>
@@ -194,18 +195,53 @@ export function WalletConnect() {
                 <span className='text-sm'>Loading balances...</span>
               </div>
             ) : (
-              <div className='grid grid-cols-2 gap-2'>
-                <div className='flex justify-between items-center p-2 border rounded-md'>
-                  <span className='font-medium'>PEPE</span>
-                  <span className='text-sm'>
-                    {balances[tokens.PEPE.address] || "0.00"}
-                  </span>
+              <div className='space-y-3'>
+                {/* PEPE Token */}
+                <div className='flex items-center justify-between p-3 border rounded-md bg-card'>
+                  <div className='flex-1'>
+                    <div className='flex items-center justify-between'>
+                      <span className='font-medium'>PEPE</span>
+                      <span className='text-sm font-mono'>
+                        {parseFloat(
+                          balances[tokens.PEPE.address] || "0"
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className='text-xs text-muted-foreground mt-1'>
+                      Mock Pepe Token
+                    </div>
+                  </div>
+                  <div className='ml-4'>
+                    <FaucetButton
+                      tokenSymbol='PEPE'
+                      tokenAddress={tokens.PEPE.address}
+                      onSuccess={fetchBalances}
+                    />
+                  </div>
                 </div>
-                <div className='flex justify-between items-center p-2 border rounded-md'>
-                  <span className='font-medium'>USDC</span>
-                  <span className='text-sm'>
-                    {balances[tokens.USDC.address] || "0.00"}
-                  </span>
+
+                {/* USDC Token */}
+                <div className='flex items-center justify-between p-3 border rounded-md bg-card'>
+                  <div className='flex-1'>
+                    <div className='flex items-center justify-between'>
+                      <span className='font-medium'>USDC</span>
+                      <span className='text-sm font-mono'>
+                        {parseFloat(
+                          balances[tokens.USDC.address] || "0"
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className='text-xs text-muted-foreground mt-1'>
+                      Mock USD Coin
+                    </div>
+                  </div>
+                  <div className='ml-4'>
+                    <FaucetButton
+                      tokenSymbol='USDC'
+                      tokenAddress={tokens.USDC.address}
+                      onSuccess={fetchBalances}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -243,6 +279,29 @@ export function WalletConnect() {
               </div>
             </div>
           )}
+
+          {/* Contract Links */}
+          <div className='space-y-2'>
+            <div className='text-sm text-muted-foreground'>Contract Links</div>
+            <div className='grid grid-cols-1 gap-2 text-xs'>
+              <a
+                href={`https://sepolia.etherscan.io/address/${tokens.PEPE.address}`}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='flex items-center gap-1 text-muted-foreground hover:text-primary'
+              >
+                PEPE Contract <ExternalLink className='h-3 w-3' />
+              </a>
+              <a
+                href={`https://sepolia.etherscan.io/address/${tokens.USDC.address}`}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='flex items-center gap-1 text-muted-foreground hover:text-primary'
+              >
+                USDC Contract <ExternalLink className='h-3 w-3' />
+              </a>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

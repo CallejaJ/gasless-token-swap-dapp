@@ -454,8 +454,8 @@
       ]
     },
     "C:\\Users\\calle\\Documents\\GitHub\\gasless-token-swap-z8\\hardhat\\contracts\\SimpleDEX.sol": {
-      "lastModificationDate": 1749391324837,
-      "contentHash": "5160b8b288edb80ca790a2a11a1c0215",
+      "lastModificationDate": 1749413296455,
+      "contentHash": "0dc81fab38bd476841744dbc155ddc1b",
       "sourceName": "contracts/SimpleDEX.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -483,7 +483,6 @@
       },
       "imports": [
         "@openzeppelin/contracts/token/ERC20/IERC20.sol",
-        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
         "@openzeppelin/contracts/utils/ReentrancyGuard.sol",
         "@openzeppelin/contracts/access/Ownable.sol"
       ],
@@ -491,7 +490,7 @@
         "^0.8.20"
       ],
       "artifacts": [
-        "SimpleDEX"
+        "SimpleDEXOptimized"
       ]
     },
     "C:\\Users\\calle\\Documents\\GitHub\\gasless-token-swap-z8\\hardhat\\node_modules\\@openzeppelin\\contracts\\utils\\ReentrancyGuard.sol": {
