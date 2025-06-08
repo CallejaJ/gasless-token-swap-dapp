@@ -48,7 +48,7 @@ A decentralized application (dApp) that enables users to **swap ERC-20 tokens wi
   - Wagmi v2 (Ethereum interactions)
   - Viem (Ethereum library)
   - Abstract Global Wallet (smart accounts)
-- **Network**: Base Sepolia testnet
+- **Network**: Sepolia testnet
 - **Smart Contracts**: ERC-20 tokens, Uniswap V2 style DEX
 
 ## 🚀 Getting Started
