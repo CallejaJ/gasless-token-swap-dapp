@@ -206,7 +206,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Privy](https://privy.io) for wallet authentication
 - [Abstract](https://abs.xyz) for smart account infrastructure
-- [Base](https://base.org) for the testnet
+- [Sepolia](https://sepolia.etherscan.io/) for the testnet
 - [shadcn/ui](https://ui.shadcn.com) for UI components
 
 ## 📞 Support
