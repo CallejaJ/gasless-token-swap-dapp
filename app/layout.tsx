@@ -1,18 +1,11 @@
-import type React from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PrivyProviderWrapper } from "@/components/privy-provider";
-import { setupConsoleFilter } from "@/lib/console-filter";
-
-import { AppInitializer } from "@/components/app-initializer";
-
-import { ErrorBoundary } from "@/components/error-boundary";
-
-// Setup console filter to hide analytics errors in development
-setupConsoleFilter();
+import { Suspense } from "react";
+import LoadingFallback from "@/components/loading-fallback";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,17 +13,7 @@ export const metadata: Metadata = {
   title: "Gasless Token Swap | Sepolia Testnet",
   description:
     "Swap ERC-20 tokens without holding ETH using Smart Accounts and sponsored gas",
-  keywords: [
-    "DeFi",
-    "Token Swap",
-    "Gasless",
-    "Smart Accounts",
-    "Account Abstraction",
-    "EIP-4337",
-  ],
-  icons: {
-    icon: "/favicon.svg",
-  },
+  // ... rest of your metadata
 };
 
 export default function RootLayout({
@@ -41,19 +24,21 @@ export default function RootLayout({
   return (
     <html lang='en' suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='dark'
-          enableSystem
-          disableTransitionOnChange
-        >
-          <PrivyProviderWrapper>
-            <main className='min-h-screen bg-gradient-to-b from-background to-background/80'>
-              {children}
-            </main>
-            <Toaster />
-          </PrivyProviderWrapper>
-        </ThemeProvider>
+        <Suspense fallback={<LoadingFallback />}>
+          <ThemeProvider
+            attribute='class'
+            defaultTheme='dark'
+            enableSystem
+            disableTransitionOnChange
+          >
+            <PrivyProviderWrapper>
+              <main className='min-h-screen bg-gradient-to-b from-background to-background/80'>
+                {children}
+              </main>
+              <Toaster />
+            </PrivyProviderWrapper>
+          </ThemeProvider>
+        </Suspense>
       </body>
     </html>
   );

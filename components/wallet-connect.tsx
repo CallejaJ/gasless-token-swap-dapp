@@ -11,10 +11,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatAddress } from "@/lib/utils";
-import { ExternalLink, Wallet } from "lucide-react";
+import { ExternalLink, Wallet, Loader2 } from "lucide-react";
+import { useSmartAccount } from "@/hooks/use-smart-account";
 
 export function WalletConnect() {
   const { ready, authenticated, user, login, logout } = usePrivy();
+  const { smartAccountAddress, isDeploying } = useSmartAccount();
 
   // Show loading state while Privy is initializing
   if (!ready) {
@@ -61,7 +63,7 @@ export function WalletConnect() {
 
   // Show connected state
   const walletAddress = user?.wallet?.address || "";
-  const smartAccountAddress = user?.smartWallet?.address || "";
+  // const smartAccountAddress = user?.smartWallet?.address || ""
 
   return (
     <Card className='w-full mb-6'>

@@ -9,17 +9,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Optimize for development experience
-  webpack: (config, { dev, isServer }) => {
-    if (dev && !isServer) {
-      // Disable aggressive code splitting in development
-      config.optimization.splitChunks = {
-        chunks: "async",
-        cacheGroups: {
-          default: false,
-        },
-      };
-    }
+  experimental: {
+    staticWorkerRequestTimeout: 60000,
+    webpackBuildWorker: true,
+  },
+  webpack: (config) => {
+    config.optimization.splitChunks = {
+      ...config.optimization.splitChunks,
+      maxSize: 200000,
+    };
     return config;
   },
 };

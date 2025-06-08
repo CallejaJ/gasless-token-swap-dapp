@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@abstract-foundation/agw-client": "latest",
+    "@abstract-foundation/agw-client": "^1.8.5",
     "@hookform/resolvers": "^3.9.1",
     "@privy-io/react-auth": "latest",
     "@radix-ui/react-accordion": "1.2.2",
@@ -54,7 +54,7 @@
     "next-themes": "latest",
     "permissionless": "^0.2.10",
     "react": "^18.3.1",
-    "react-day-picker": "8.10.1",
+    "react-day-picker": "^9.7.0",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",

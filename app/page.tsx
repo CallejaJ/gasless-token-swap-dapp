@@ -1,5 +1,7 @@
 import { WalletConnect } from "@/components/wallet-connect";
 import { TokenSwap } from "@/components/token-swap";
+import { ModeToggle } from "@/components/mode-toggle";
+import { PaymasterStatus } from "@/components/paymaster-status";
 
 export default function Page() {
   return (
