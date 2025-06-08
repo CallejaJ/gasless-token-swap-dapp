@@ -29,7 +29,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "components/token-swap.tsx"
+    "components/token-swap.tsx",
+    "hardhat/scripts/deploy.js"
   ],
   "exclude": ["node_modules"]
 }

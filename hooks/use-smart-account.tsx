@@ -14,10 +14,22 @@ import {
 import { sepolia } from "viem/chains";
 import { erc20Abi } from "abitype/abis";
 
-// Token addresses on Sepolia
-const PEPE_ADDRESS = "0x6982508145454Ce325dDbE47a25d4ec3d2311933";
-const USDC_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-const DEX_CONTRACT = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"; // Uniswap V2 Router
+// ✅ Direcciones CORRECTAS de los contratos desplegados
+const PEPE_ADDRESS =
+  process.env.NEXT_PUBLIC_PEPE_TOKEN_ADDRESS ||
+  "0x6A019c763E2e62AB06A148641363A56775B67cf9";
+const USDC_ADDRESS =
+  process.env.NEXT_PUBLIC_USDC_TOKEN_ADDRESS ||
+  "0xe65C976b76b8d8894638cFc8727017534d7119c0";
+const DEX_CONTRACT =
+  process.env.NEXT_PUBLIC_DEX_CONTRACT_ADDRESS ||
+  "0xF47d92f44a04886F636Cd772938a78e5AE2E26cC";
+
+// Debug log para verificar direcciones
+console.log("🔍 Contract addresses loaded:");
+console.log("PEPE:", PEPE_ADDRESS);
+console.log("USDC:", USDC_ADDRESS);
+console.log("DEX:", DEX_CONTRACT);
 
 interface Token {
   symbol: string;
@@ -29,15 +41,15 @@ interface Token {
 const TOKENS: Record<string, Token> = {
   PEPE: {
     symbol: "PEPE",
-    name: "Pepe Token",
+    name: "Mock Pepe",
     decimals: 18,
-    address: PEPE_ADDRESS,
+    address: PEPE_ADDRESS as Address,
   },
   USDC: {
     symbol: "USDC",
-    name: "USD Coin",
+    name: "Mock USD Coin",
     decimals: 6,
-    address: USDC_ADDRESS,
+    address: USDC_ADDRESS as Address,
   },
 };
 
@@ -134,7 +146,7 @@ export function useSmartAccount() {
       // Fetch PEPE balance
       try {
         const pepeContract = getContract({
-          address: PEPE_ADDRESS,
+          address: PEPE_ADDRESS as Address,
           abi: erc20Abi,
           client: publicClient,
         });
@@ -147,13 +159,13 @@ export function useSmartAccount() {
         console.log(`✅ PEPE balance: ${newBalances[PEPE_ADDRESS]}`);
       } catch (err) {
         console.log("ℹ️ PEPE balance fetch failed, using demo value:", err);
-        newBalances[PEPE_ADDRESS] = "1000.0"; // Demo value
+        newBalances[PEPE_ADDRESS] = "0.0"; // Start with 0, user needs faucet
       }
 
       // Fetch USDC balance
       try {
         const usdcContract = getContract({
-          address: USDC_ADDRESS,
+          address: USDC_ADDRESS as Address,
           abi: erc20Abi,
           client: publicClient,
         });
@@ -166,7 +178,7 @@ export function useSmartAccount() {
         console.log(`✅ USDC balance: ${newBalances[USDC_ADDRESS]}`);
       } catch (err) {
         console.log("ℹ️ USDC balance fetch failed, using demo value:", err);
-        newBalances[USDC_ADDRESS] = "500.0"; // Demo value
+        newBalances[USDC_ADDRESS] = "0.0"; // Start with 0, user needs faucet
       }
 
       setBalances(newBalances);
@@ -174,10 +186,10 @@ export function useSmartAccount() {
       console.error("❌ Error fetching balances:", err);
       setError("Failed to fetch token balances");
 
-      // Set demo balances for testing
+      // Set zero balances - user needs to use faucet
       setBalances({
-        [PEPE_ADDRESS]: "1000.0",
-        [USDC_ADDRESS]: "500.0",
+        [PEPE_ADDRESS]: "0.0",
+        [USDC_ADDRESS]: "0.0",
       });
     } finally {
       setIsLoadingBalances(false);
@@ -247,30 +259,29 @@ export function useSmartAccount() {
       });
 
       try {
-        // Create mock swap transaction data
+        // Create swap transaction data for our SimpleDEX contract
         const swapData = encodeFunctionData({
           abi: [
             {
-              name: "mockSwap",
+              name: "swapPepeToUsdc",
               type: "function",
-              inputs: [
-                { name: "tokenIn", type: "address" },
-                { name: "tokenOut", type: "address" },
-                { name: "amount", type: "uint256" },
-              ],
+              inputs: [{ name: "_pepeAmount", type: "uint256" }],
               outputs: [],
             },
           ],
-          functionName: "mockSwap",
-          args: [fromToken.address, toToken.address, amount],
+          functionName: "swapPepeToUsdc",
+          args: [amount],
         });
 
         // Execute the swap transaction
-        const txHash = await executeTransaction(DEX_CONTRACT, swapData);
+        const txHash = await executeTransaction(
+          DEX_CONTRACT as Address,
+          swapData
+        );
 
         console.log("✅ Swap completed:", txHash);
 
-        // Update balances optimistically after successful swap
+        // Update balances after successful swap
         setTimeout(() => {
           fetchBalances();
         }, 3000);
