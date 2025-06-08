@@ -6,7 +6,7 @@
 
 ## 🎯 Overview
 
-A decentralized application (dApp) that enables users to **swap ERC-20 tokens without holding any ETH** by leveraging **Smart Accounts (EIP-4337)** and **sponsored gas payments**. Built on Base Sepolia testnet.
+A decentralized application (dApp) that enables users to **swap ERC-20 tokens without holding any ETH** by leveraging **Smart Accounts (EIP-4337)** and **sponsored gas payments**. Built on Sepolia testnet.
 
 ## ✨ Features
 
@@ -48,7 +48,7 @@ A decentralized application (dApp) that enables users to **swap ERC-20 tokens wi
   - Wagmi v2 (Ethereum interactions)
   - Viem (Ethereum library)
   - Abstract Global Wallet (smart accounts)
-- **Network**: Base Sepolia testnet
+- **Network**: Sepolia testnet
 - **Smart Contracts**: ERC-20 tokens, Uniswap V2 style DEX
 
 ## 🚀 Getting Started
@@ -206,7 +206,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Privy](https://privy.io) for wallet authentication
 - [Abstract](https://abs.xyz) for smart account infrastructure
-- [Base](https://base.org) for the testnet
+- [Sepolia](https://sepolia.etherscan.io/) for the testnet
 - [shadcn/ui](https://ui.shadcn.com) for UI components
 
 ## 📞 Support
