@@ -63,8 +63,8 @@ export function PrivyProviderWrapper({
         {/* Banner informativo sobre Smart Wallets */}
         <div className='bg-gradient-to-r from-green-500/10 via-blue-500/10 to-purple-500/10 border-b border-green-200 dark:border-green-800 p-3'>
           <div className='text-center text-sm text-green-800 dark:text-green-200'>
-            ⚡ <strong>Smart Wallets enabled!</strong> Gas-free transactions
-            coming soon.
+            ⚡ <strong>Smart Wallets enabled!</strong> Gas-free transactions now
+            available.
           </div>
         </div>
         {children}
