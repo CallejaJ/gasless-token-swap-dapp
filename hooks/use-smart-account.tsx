@@ -5,7 +5,6 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import {
   createPublicClient,
   http,
-  parseUnits,
   formatUnits,
   getContract,
   type Address,
@@ -14,7 +13,10 @@ import {
 import { sepolia } from "viem/chains";
 import { erc20Abi } from "abitype/abis";
 
-// ✅ Direcciones CORRECTAS de los contratos desplegados
+// ✅ Imports para Biconomy v4.5.7 (REAL Account Abstraction EIP-4337)
+import { createSmartAccountClient } from "@biconomy/account";
+
+// ✅ Direcciones de contratos
 const PEPE_ADDRESS =
   process.env.NEXT_PUBLIC_PEPE_TOKEN_ADDRESS ||
   "0xCf0d3a20149dFD96aE8f4757632826F53c1A89AA";
@@ -25,11 +27,20 @@ const DEX_CONTRACT =
   process.env.NEXT_PUBLIC_DEX_CONTRACT_ADDRESS ||
   "0x308C6e1BCa2f2939B973Ff2c977cedCE13875f43";
 
-// Debug log para verificar direcciones
-console.log("🔍 Contract addresses loaded:");
-console.log("PEPE:", PEPE_ADDRESS);
-console.log("USDC:", USDC_ADDRESS);
-console.log("DEX:", DEX_CONTRACT);
+// ✅ Biconomy config
+const BICONOMY_PAYMASTER_API_KEY =
+  process.env.NEXT_PUBLIC_BICONOMY_PAYMASTER_API_KEY!;
+const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL!;
+const BICONOMY_PAYMASTER_URL =
+  process.env.NEXT_PUBLIC_BICONOMY_PAYMASTER_URL ||
+  "https://paymaster.biconomy.io/api/v2/11155111/MROF-EWd6.de4bef69-1391-43ce-951b-c195a3c62ea2";
+
+console.log("🔧 Biconomy Config (v4.5.7):");
+console.log(
+  "Paymaster API Key:",
+  BICONOMY_PAYMASTER_API_KEY ? "✅" : "❌ MISSING!"
+);
+console.log("Paymaster URL:", BICONOMY_PAYMASTER_URL ? "✅" : "❌ MISSING!");
 
 interface Token {
   symbol: string;
@@ -54,7 +65,7 @@ const TOKENS: Record<string, Token> = {
 };
 
 export function useSmartAccount() {
-  const { authenticated, user, ready } = usePrivy();
+  const { authenticated, ready } = usePrivy();
   const { wallets } = useWallets();
 
   const [smartAccountAddress, setSmartAccountAddress] =
@@ -62,127 +73,197 @@ export function useSmartAccount() {
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<Record<string, string>>({});
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
+  const [smartAccount, setSmartAccount] = useState<any>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
 
-  // Smart Wallets state
-  const [smartWalletClient, setSmartWalletClient] = useState<any>(null);
-  const [hasSmartWallets, setHasSmartWallets] = useState(false);
-
-  // Create public client for blockchain interactions
+  // Public client
   const publicClient = useMemo(() => {
     return createPublicClient({
       chain: sepolia,
-      transport: http(
-        process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ||
-          "https://eth-sepolia.public.blastapi.io"
-      ),
+      transport: http(SEPOLIA_RPC_URL),
     });
   }, []);
 
-  // Get wallet address usando useWallets (método más confiable)
-  const walletAddress = useMemo(() => {
+  // ✅ SOLO usar embedded wallet
+  const embeddedWallet = useMemo(() => {
     if (wallets && wallets.length > 0) {
-      // Buscar la embedded wallet de Privy
       const privyWallet = wallets.find(
-        (wallet) => wallet.walletClientType === "privy"
+        (w) => w.walletClientType === "privy" && w.connectorType === "embedded"
       );
-      if (privyWallet?.address) {
-        return privyWallet.address as Address;
-      }
-
-      // Fallback: usar la primera wallet disponible
-      if (wallets[0]?.address) {
-        return wallets[0].address as Address;
-      }
+      return privyWallet;
     }
     return null;
   }, [wallets]);
 
-  // Cargar Smart Wallets dinámicamente
-  useEffect(() => {
-    const loadSmartWallets = async () => {
-      try {
-        await import("@privy-io/react-auth/smart-wallets");
-        setHasSmartWallets(true);
-        console.log("✅ Smart Wallets module loaded successfully");
-      } catch (error) {
-        console.log(
-          "ℹ️ Smart Wallets not available, using standard wallet mode"
-        );
-        setHasSmartWallets(false);
-      }
-    };
+  // ✅ Crear signer compatible con Biconomy v4.5.7
+  const createBiconomySigner = useCallback(async () => {
+    if (!embeddedWallet) return null;
 
-    loadSmartWallets();
-  }, []);
+    try {
+      const provider = await embeddedWallet.getEthereumProvider();
+      console.log(
+        "✅ Creating Biconomy signer from embedded wallet:",
+        embeddedWallet.address
+      );
 
-  // Initialize account when ready and authenticated
-  useEffect(() => {
-    if (ready && authenticated && walletAddress) {
-      setSmartAccountAddress(walletAddress);
-      fetchBalances();
+      // Retornar el provider directamente para Biconomy v4.5.7
+      return provider;
+    } catch (err) {
+      console.error("❌ Failed to create signer:", err);
+      return null;
+    }
+  }, [embeddedWallet]);
+
+  // ✅ Inicializar Biconomy con REAL Account Abstraction (EIP-4337)
+  const initializeBiconomyClient = useCallback(async () => {
+    if (!BICONOMY_PAYMASTER_API_KEY) {
+      setError(
+        "❌ Missing Biconomy API key. Check your environment variables."
+      );
+      return;
+    }
+
+    if (!embeddedWallet || embeddedWallet.connectorType !== "embedded") {
+      setError(
+        "❌ Embedded wallet required. Please enable 'Smart wallets' and 'Auto-create embedded wallets' in Privy dashboard"
+      );
+      return;
+    }
+
+    try {
+      setIsInitializing(true);
       setError(null);
+      console.log("🚀 Initializing Biconomy v4.5.7 (REAL EIP-4337)...");
+      console.log("📱 Using embedded wallet:", embeddedWallet.address);
+
+      // 1. Obtener provider de Privy
+      const provider = await embeddedWallet.getEthereumProvider();
+
+      // 2. Crear un adaptador para el signer
+      const signer = {
+        provider: provider,
+        getAddress: async () => embeddedWallet.address as Address,
+        _isSigner: true,
+      };
+
+      // 3. ✅ Crear Smart Account Client (v4.5.7)
+      const smartAccountClient = await createSmartAccountClient({
+        signer: signer,
+        paymasterUrl: BICONOMY_PAYMASTER_URL,
+        chainId: sepolia.id, // 11155111
+        rpcUrl: SEPOLIA_RPC_URL, // Biconomy v4.5.7 necesita esto
+      });
+
+      const address = await smartAccountClient.getAccountAddress();
+
+      console.log("✅ Biconomy Smart Account (EIP-4337) initialized!");
+      console.log("🎯 Smart Account Address:", address);
+      console.log(
+        "🔥 This is REAL Account Abstraction with Sponsored Paymaster!"
+      );
+
+      setSmartAccount(smartAccountClient);
+      setSmartAccountAddress(address as Address);
+    } catch (err: unknown) {
+      console.error("❌ Biconomy initialization failed:", err);
+
+      if (err instanceof Error) {
+        if (err.message.includes("API") || err.message.includes("key")) {
+          setError(
+            "❌ Invalid Biconomy API key. Check your environment variables."
+          );
+        } else {
+          setError(`Biconomy error: ${err.message}`);
+        }
+      } else {
+        setError("Biconomy error: Unknown error occurred");
+      }
+    } finally {
+      setIsInitializing(false);
+    }
+  }, [embeddedWallet]);
+
+  // Inicializar cuando esté todo listo
+  useEffect(() => {
+    console.log("🔍 Checking conditions:");
+    console.log("- Ready:", ready);
+    console.log("- Authenticated:", authenticated);
+    console.log("- Embedded wallet:", embeddedWallet?.address);
+    console.log("- Wallet connector type:", embeddedWallet?.connectorType);
+    console.log(
+      "- Biconomy API Key:",
+      BICONOMY_PAYMASTER_API_KEY ? "✅" : "❌"
+    );
+
+    if (
+      ready &&
+      authenticated &&
+      embeddedWallet &&
+      BICONOMY_PAYMASTER_API_KEY
+    ) {
+      if (embeddedWallet.connectorType === "embedded") {
+        console.log(
+          "✅ All conditions met - initializing Biconomy v4.5.7 (REAL EIP-4337)"
+        );
+        initializeBiconomyClient();
+      } else {
+        setError(
+          "❌ Please use embedded wallet. Enable 'Smart wallets' in Privy dashboard"
+        );
+      }
     } else {
       resetState();
     }
-  }, [ready, authenticated, walletAddress]);
+  }, [ready, authenticated, embeddedWallet, initializeBiconomyClient]);
 
   const resetState = useCallback(() => {
     setSmartAccountAddress(null);
+    setSmartAccount(null);
     setBalances({});
     setError(null);
   }, []);
 
-  // Fetch token balances
+  // Fetch balances
   const fetchBalances = useCallback(async () => {
-    if (!walletAddress) return;
+    const addressToCheck = smartAccountAddress;
+    if (!addressToCheck) {
+      console.log("⏳ Smart account not ready for balance fetch");
+      return;
+    }
 
     try {
       setIsLoadingBalances(true);
-      setError(null);
       const newBalances: Record<string, string> = {};
 
-      // Fetch PEPE balance
-      try {
-        const pepeContract = getContract({
-          address: PEPE_ADDRESS as Address,
-          abi: erc20Abi,
-          client: publicClient,
-        });
+      // PEPE balance
+      const pepeContract = getContract({
+        address: PEPE_ADDRESS as Address,
+        abi: erc20Abi,
+        client: publicClient,
+      });
+      const pepeBalance = await pepeContract.read.balanceOf([addressToCheck]);
+      newBalances[PEPE_ADDRESS] = formatUnits(
+        pepeBalance,
+        TOKENS.PEPE.decimals
+      );
+      console.log(`✅ PEPE balance: ${newBalances[PEPE_ADDRESS]}`);
 
-        const pepeBalance = await pepeContract.read.balanceOf([walletAddress]);
-        newBalances[PEPE_ADDRESS] = formatUnits(
-          pepeBalance,
-          TOKENS.PEPE.decimals
-        );
-        console.log(`✅ PEPE balance: ${newBalances[PEPE_ADDRESS]}`);
-      } catch (err) {
-        console.log("ℹ️ PEPE balance fetch failed:", err);
-        newBalances[PEPE_ADDRESS] = "0.0";
-      }
-
-      // Fetch USDC balance
-      try {
-        const usdcContract = getContract({
-          address: USDC_ADDRESS as Address,
-          abi: erc20Abi,
-          client: publicClient,
-        });
-
-        const usdcBalance = await usdcContract.read.balanceOf([walletAddress]);
-        newBalances[USDC_ADDRESS] = formatUnits(
-          usdcBalance,
-          TOKENS.USDC.decimals
-        );
-        console.log(`✅ USDC balance: ${newBalances[USDC_ADDRESS]}`);
-      } catch (err) {
-        console.log("ℹ️ USDC balance fetch failed:", err);
-        newBalances[USDC_ADDRESS] = "0.0";
-      }
+      // USDC balance
+      const usdcContract = getContract({
+        address: USDC_ADDRESS as Address,
+        abi: erc20Abi,
+        client: publicClient,
+      });
+      const usdcBalance = await usdcContract.read.balanceOf([addressToCheck]);
+      newBalances[USDC_ADDRESS] = formatUnits(
+        usdcBalance,
+        TOKENS.USDC.decimals
+      );
+      console.log(`✅ USDC balance: ${newBalances[USDC_ADDRESS]}`);
 
       setBalances(newBalances);
     } catch (err) {
-      console.error("❌ Error fetching balances:", err);
-      setError("Failed to fetch token balances");
+      console.error("❌ Balance fetch failed:", err);
       setBalances({
         [PEPE_ADDRESS]: "0.0",
         [USDC_ADDRESS]: "0.0",
@@ -190,148 +271,99 @@ export function useSmartAccount() {
     } finally {
       setIsLoadingBalances(false);
     }
-  }, [walletAddress, publicClient]);
+  }, [smartAccountAddress, publicClient]);
 
-  // Execute transaction con mejor manejo de errores
+  // Auto-fetch balances
+  useEffect(() => {
+    if (smartAccountAddress) {
+      fetchBalances();
+    }
+  }, [smartAccountAddress, fetchBalances]);
+
+  // ✅ Ejecutar transacción GASLESS con Biconomy
   const executeTransaction = useCallback(
     async (to: Address, data: `0x${string}`, value: bigint = 0n) => {
-      if (!smartAccountAddress) {
-        throw new Error("Wallet not initialized");
+      if (!smartAccount) {
+        throw new Error("Biconomy Smart Account not ready");
       }
 
       try {
-        console.log("🚀 Attempting transaction:", {
+        console.log(
+          "🚀 Executing GASLESS transaction (EIP-4337 Account Abstraction):",
+          {
+            to,
+            data,
+            value: value.toString(),
+          }
+        );
+
+        const tx = {
           to,
-          from: smartAccountAddress,
+          data,
+          value: value.toString(),
+        };
+
+        console.log("📤 Sending transaction with Biconomy Smart Account...");
+        console.log("Smart Account address:", smartAccountAddress);
+        console.log("Transaction details:", tx);
+
+        const userOpResponse = await smartAccount.sendTransaction(tx, {
+          paymasterServiceData: { mode: "SPONSORED" }, // ✅ REAL Sponsored Paymaster
         });
 
-        // Método 1: Intentar usar embedded wallet provider
-        if (wallets && wallets.length > 0) {
-          const embeddedWallet = wallets.find(
-            (wallet) => wallet.walletClientType === "privy"
-          );
+        console.log("⏳ Waiting for transaction hash...");
+        const { transactionHash } = await userOpResponse.waitForTxHash();
 
-          if (embeddedWallet) {
-            try {
-              console.log("📱 Trying embedded wallet provider...");
-              const provider = await embeddedWallet.getEthereumProvider();
-
-              if (provider && provider.request) {
-                const txHash = await provider.request({
-                  method: "eth_sendTransaction",
-                  params: [
-                    {
-                      from: smartAccountAddress,
-                      to,
-                      data,
-                      value: value > 0n ? `0x${value.toString(16)}` : undefined,
-                    },
-                  ],
-                });
-
-                console.log(
-                  "✅ Real transaction successful via provider:",
-                  txHash
-                );
-                return txHash;
-              } else {
-                console.log("⚠️ Provider not available, trying alternative...");
-              }
-            } catch (providerError) {
-              console.log("⚠️ Provider method failed:", providerError);
-            }
-          }
-        }
-
-        // Método 2: Intentar via window.ethereum (si está disponible)
-        if (typeof window !== "undefined" && (window as any).ethereum) {
-          try {
-            console.log("🌐 Trying window.ethereum...");
-            const txHash = await (window as any).ethereum.request({
-              method: "eth_sendTransaction",
-              params: [
-                {
-                  from: smartAccountAddress,
-                  to,
-                  data,
-                  value: value > 0n ? `0x${value.toString(16)}` : undefined,
-                },
-              ],
-            });
-
-            console.log(
-              "✅ Real transaction successful via window.ethereum:",
-              txHash
-            );
-            return txHash;
-          } catch (ethereumError) {
-            console.log("⚠️ window.ethereum method failed:", ethereumError);
-          }
-        }
-
-        // Método 3: Fallback a transacción mock (manteniendo la funcionalidad)
-        console.log("📝 Using mock transaction as fallback");
-        const mockTxHash = `0x${Array.from({ length: 64 }, () =>
-          Math.floor(Math.random() * 16).toString(16)
-        ).join("")}`;
-
-        console.log("💡 Mock transaction simulated:", { to, data, value });
-
-        // Simular delay de red
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        return mockTxHash;
-      } catch (error) {
-        console.error("❌ All transaction methods failed:", error);
-        throw new Error("Transaction failed: " + (error as Error).message);
+        console.log("✅ Transaction confirmed:", transactionHash);
+        return transactionHash;
+      } catch (error: any) {
+        console.error("❌ Gasless transaction failed:", error);
+        console.error("Error details:", {
+          message: error.message,
+          code: error.code,
+          data: error.data,
+        });
+        throw error;
       }
     },
-    [smartAccountAddress, wallets]
+    [smartAccount, smartAccountAddress]
   );
 
-  // Execute token approval
+  // Approval gasless
   const executeApproval = useCallback(
     async (tokenAddress: Address, amount: bigint) => {
-      console.log("📝 Approving token spend:", {
-        tokenAddress,
-        amount: amount.toString(),
-      });
-
       const approveData = encodeFunctionData({
         abi: erc20Abi,
         functionName: "approve",
         args: [DEX_CONTRACT as Address, amount],
       });
-
       return await executeTransaction(tokenAddress, approveData);
     },
     [executeTransaction]
   );
 
-  // Execute token swap with approval
+  // Swap gasless completo
   const executeSwap = useCallback(
     async (fromToken: Token, toToken: Token, amount: bigint) => {
-      if (!smartAccountAddress) {
-        throw new Error("Wallet not initialized");
+      if (!smartAccount) {
+        throw new Error("Biconomy not ready");
       }
 
-      console.log("🔄 Starting token swap:", {
+      console.log("🔄 Starting GASLESS swap (EIP-4337 Account Abstraction):", {
         from: fromToken.symbol,
         to: toToken.symbol,
         amount: amount.toString(),
       });
 
       try {
-        // Step 1: Approve token spending
-        console.log("1️⃣ Approving PEPE spending...");
-        const approveTxHash = await executeApproval(fromToken.address, amount);
-        console.log("✅ Approval completed:", approveTxHash);
+        // 1. Approval gasless
+        console.log("1️⃣ Gasless approval...");
+        await executeApproval(fromToken.address, amount);
 
-        // Wait a bit for approval to be processed
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        // Step 2: Execute swap
-        console.log("2️⃣ Executing swap...");
+        // 2. Swap gasless
+        console.log("2️⃣ Gasless swap...");
         const swapData = encodeFunctionData({
           abi: [
             {
@@ -345,42 +377,35 @@ export function useSmartAccount() {
           args: [amount],
         });
 
-        const swapTxHash = await executeTransaction(
+        const txHash = await executeTransaction(
           DEX_CONTRACT as Address,
           swapData
         );
-        console.log("✅ Swap completed:", swapTxHash);
 
-        // Update balances after successful swap
-        setTimeout(() => {
-          fetchBalances();
-        }, 3000);
+        setTimeout(fetchBalances, 5000);
 
-        return swapTxHash;
+        return txHash;
       } catch (error) {
-        console.error("❌ Swap failed:", error);
-        throw new Error("Swap failed: " + (error as Error).message);
+        console.error("❌ Gasless swap failed:", error);
+        throw error;
       }
     },
-    [smartAccountAddress, executeTransaction, executeApproval, fetchBalances]
+    [smartAccount, executeTransaction, executeApproval, fetchBalances]
   );
 
-  // Get token balance by address
   const getTokenBalance = useCallback(
-    (tokenAddress: Address): string => {
-      return balances[tokenAddress] || "0.0";
-    },
+    (tokenAddress: Address): string => balances[tokenAddress] || "0.0",
     [balances]
   );
 
-  // Check if wallet is ready
-  const isSmartWalletReady = useMemo(() => {
-    return !!(smartAccountAddress && authenticated && ready);
-  }, [smartAccountAddress, authenticated, ready]);
+  const isSmartWalletReady = useMemo(
+    () => !!(smartAccountAddress && smartAccount && authenticated && ready),
+    [smartAccountAddress, smartAccount, authenticated, ready]
+  );
 
   return {
     smartAccountAddress,
-    isDeploying: false,
+    isDeploying: isInitializing,
     error,
     balances,
     isLoadingBalances,
@@ -391,10 +416,9 @@ export function useSmartAccount() {
     fetchBalances,
     reset: resetState,
     isSmartWalletReady,
-    hasSmartWallets,
-    smartWalletClient,
-    // Info adicional
-    isGasless: hasSmartWallets,
-    paymasterActive: isSmartWalletReady && hasSmartWallets,
+    hasSmartWallets: !!smartAccount,
+    smartWalletClient: smartAccount,
+    isGasless: !!smartAccount,
+    paymasterActive: !!smartAccount,
   };
 }
