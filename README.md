@@ -3,33 +3,33 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Sepolia](https://img.shields.io/badge/Network-Sepolia%20Testnet-blue?style=for-the-badge)](https://sepolia.etherscan.io)
 [![Account Abstraction](https://img.shields.io/badge/EIP--4337-Account%20Abstraction-purple?style=for-the-badge)](https://eips.ethereum.org/EIPS/eip-4337)
-[![Privy](https://img.shields.io/badge/Auth-Privy-green?style=for-the-badge)](https://privy.io)
+[![Biconomy](https://img.shields.io/badge/AA-Biconomy-orange?style=for-the-badge)](https://biconomy.io)
 
 ## 🎯 Overview
 
-A decentralized application (dApp) that enables users to **swap ERC-20 tokens without holding any ETH** by leveraging **Smart Accounts (EIP-4337)** and **sponsored gas payments**. Built on Sepolia testnet using Privy for Smart Wallet management.
+A decentralized application (dApp) that enables users to **swap ERC-20 tokens without holding any ETH** by leveraging **Smart Accounts (EIP-4337)** and **sponsored gas payments**. Built on Sepolia testnet using Biconomy for Account Abstraction and Paymaster services.
 
 ## ✨ Features
 
 ### 1. **Smart Account Creation** ✅
 
-- Automatic smart account deployment when users connect their wallet
-- Support for MetaMask and email authentication via Privy
+- Automatic smart account deployment using Biconomy SDK
+- Support for MetaMask and email authentication
 - Display of both EOA and Smart Account addresses
-- Real-time balance display for supported tokens
+- Real-time balance display for deployed tokens
 
 ### 2. **Gasless Token Swaps** ✅
 
-- Swap between PEPE ↔ USDC mock tokens
+- Swap between PEPE ↔ USDC tokens (deployed on Sepolia)
 - **No ETH required** for transactions
-- All gas fees sponsored by Paymaster
+- All gas fees sponsored by Biconomy Paymaster
 - Exchange rate calculation (1 PEPE = 0.000005 USDC)
 - Automatic token approval handling
 
 ### 3. **Account Abstraction (EIP-4337)** ✅
 
-- Smart accounts deployed using Privy
-- Sponsored gas via Paymaster integration
+- Smart accounts deployed using Biconomy
+- Sponsored gas via Biconomy Paymaster
 - Clear indication that transactions are gasless
 
 ### 4. **Transaction Feedback** ✅
@@ -51,20 +51,32 @@ A decentralized application (dApp) that enables users to **swap ERC-20 tokens wi
 - **Framework**: Next.js 15, React 18, TypeScript
 - **Styling**: Tailwind CSS, shadcn/ui
 - **Web3**:
-  - **Privy** (Smart Wallet & authentication)
+  - **Biconomy SDK** (Account Abstraction & Paymaster)
   - **Viem** 2.22.23 (Ethereum library)
-  - **Account Abstraction**: ERC-4337 via Privy
+  - **Account Abstraction**: ERC-4337 via Biconomy
 - **Network**: Sepolia testnet
-- **AA Provider**: **Privy** (with Safe Smart Wallets)
+- **AA Provider**: **Biconomy**
+
+## 🪙 Deployed Contracts
+
+### Token Contracts (Sepolia Testnet)
+
+- **PEPE Token**: `0xb61a8fbe8036478AD3206439Aa8ff4b2F7769782`
+- **USDC Token**: `0xdA063Ad8faDD7c41B55e33B530dBc3d376A143F0`
+
+### Smart Account Example
+
+- **Smart Account**: `0xfCa17024a5AD5e24d6C1c444D6B94b980AE00243`
+- **Initial Balance**: 50,000 PEPE + 250 USDC (minted successfully)
 
 ## 🎮 Demo
 
 The app demonstrates:
 
-1. **Email/Wallet connection** without requiring ETH
-2. **Automatic Smart Account creation**
-3. **Gasless token swaps** with clear UI feedback
-4. **Real-time balance updates** (demo mode)
+1. **Wallet connection** without requiring ETH
+2. **Automatic Smart Account creation** via Biconomy
+3. **Gasless token swaps** with real deployed tokens
+4. **Real-time balance updates** from blockchain
 5. **Transaction tracking** via Etherscan links
 
 ## 🚀 Getting Started
@@ -72,7 +84,7 @@ The app demonstrates:
 ### Prerequisites
 
 - Node.js 18+
-- A Privy account and App ID
+- A Biconomy account and API keys
 - Alchemy API key for Sepolia RPC
 
 ### Installation
@@ -99,22 +111,20 @@ cp .env.example .env.local
 4. Configure your `.env.local`:
 
 ```env
-# Privy Configuration
-NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
-PRIVY_APP_SECRET=your_privy_app_secret
+# Biconomy Configuration
+NEXT_PUBLIC_BICONOMY_PAYMASTER_API_KEY=your_paymaster_api_key
+NEXT_PUBLIC_BICONOMY_BUNDLER_URL=https://bundler.biconomy.io/api/v2/11155111/your_bundler_api_key
 
 # Alchemy Configuration
 NEXT_PUBLIC_ALCHEMY_API_KEY=your_alchemy_api_key
 NEXT_PUBLIC_SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/your_alchemy_api_key
+
+# Token Addresses (Already deployed)
+NEXT_PUBLIC_PEPE_TOKEN_ADDRESS=0xb61a8fbe8036478AD3206439Aa8ff4b2F7769782
+NEXT_PUBLIC_USDC_TOKEN_ADDRESS=0xdA063Ad8faDD7c41B55e33B530dBc3d376A143F0
 ```
 
-5. Configure Smart Wallets in Privy Dashboard:
-
-   - Enable Smart Wallets
-   - Select "Safe" as wallet type
-   - Add Sepolia network with your Alchemy bundler URL
-
-6. Run the development server:
+5. Run the development server:
 
 ```bash
 npm run dev
@@ -128,19 +138,19 @@ npm run dev
 
    - [x] Auto-deploy smart account on wallet connection
    - [x] Display smart account address and balances
-   - [x] Support email and wallet authentication
+   - [x] Support MetaMask authentication
 
 2. **Token swap** ✅
 
-   - [x] Swap between PEPE ↔ USDC tokens
+   - [x] Swap between real deployed PEPE ↔ USDC tokens
    - [x] Handle approve + swap functionality
    - [x] Exchange rate calculation and display
 
 3. **Gasless transactions** ✅
 
    - [x] Users don't need ETH in their accounts
-   - [x] Gas sponsored by Paymaster
-   - [x] Clear UI indication: "Gas fees sponsored by Paymaster"
+   - [x] Gas sponsored by Biconomy Paymaster
+   - [x] Clear UI indication: "Gas fees sponsored by Biconomy"
 
 4. **Transaction feedback** ✅
 
@@ -155,6 +165,8 @@ npm run dev
 
 ### 🎁 **Bonus Features:**
 
+- ✅ **Real token contracts**: Deployed and verified on Sepolia
+- ✅ **Token minting**: Successful deployment with initial balances
 - ✅ **Price preview**: Real-time exchange rate display
 - ✅ **Transaction status**: Comprehensive feedback system
 
@@ -162,48 +174,79 @@ npm run dev
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│   Frontend  │────▶│    Privy     │────▶│  Smart Account  │
-│  (Next.js)  │     │   (Auth)     │     │   (ERC-4337)   │
+│   Frontend  │────▶│   Biconomy   │────▶│  Smart Account  │
+│  (Next.js)  │     │     SDK      │     │   (ERC-4337)   │
 └─────────────┘     └──────────────┘     └─────────────────┘
                                                    │
                                                    ▼
                           ┌─────────────┐    ┌─────────────┐
-                          │  Paymaster  │───▶│  Mock DEX   │
-                          │ (Pimlico)   │    │  Contract   │
+                          │  Biconomy   │───▶│   Token     │
+                          │ Paymaster   │    │ Contracts   │
                           └─────────────┘    └─────────────┘
 ```
 
 ## 🧪 Implementation Details
 
 - **Network**: Sepolia Testnet
-- **AA Provider**: Privy with Safe Smart Wallets
-- **Token Contracts**: Mock addresses (demo mode with fallback balances)
-- **Paymaster**: Pimlico public paymaster for testing
-- **Smart Wallet Type**: Safe (ERC-4337 compatible)
+- **AA Provider**: Biconomy SDK
+- **Token Contracts**: Real deployed ERC-20 tokens
+- **Paymaster**: Biconomy Paymaster for sponsored transactions
+- **Smart Wallet Type**: Biconomy Smart Account (ERC-4337 compatible)
 
 ## 🎯 Demo Flow
 
-1. **Connect**: Use email or MetaMask (no ETH needed)
-2. **Smart Account**: Automatically created and displayed
+1. **Connect**: Use MetaMask (no ETH needed)
+2. **Smart Account**: Automatically created via Biconomy
 3. **Swap**: Enter amount, see exchange rate, confirm
 4. **Gasless**: Transaction executes without gas fees
 5. **Track**: View transaction on Etherscan
 
-## 🚧 Current Status
+## 🚀 Token Deployment
 
-- ✅ **Fully functional** gasless token swap interface
-- ✅ **Smart Account** integration working
-- ✅ **All UI/UX** requirements met
-- ⚠️ **Demo mode**: Uses simulated balances (real token contracts would need deployment)
+### Successful Deployment ✅
 
-## 🔮 Production Deployment
+The following tokens have been successfully deployed and minted:
 
-For production use:
+```bash
+# PEPE Token: 0xb61a8fbe8036478AD3206439Aa8ff4b2F7769782
+# USDC Token: 0xdA063Ad8faDD7c41B55e33B530dBc3d376A143F0
 
-1. Deploy actual ERC-20 token contracts
-2. Configure production Paymaster
-3. Set up proper token faucet
-4. Add real DEX integration (Uniswap V2/V3)
+# Smart Account funded with:
+# - 50,000 PEPE tokens
+# - 250 USDC tokens
+```
+
+### Minting Script
+
+Use the provided Hardhat script to mint tokens to new smart accounts:
+
+```bash
+npx hardhat run scripts/mint-tokens.js --network sepolia
+```
+
+## 🔮 Production Considerations
+
+For production deployment:
+
+1. ✅ Token contracts already deployed and verified
+2. ✅ Biconomy Paymaster configured for gasless transactions
+3. ⚠️ Configure production Biconomy API keys
+4. ⚠️ Set up proper token economics and liquidity pools
+
+## 🛠 Development Tools
+
+### Hardhat Commands
+
+```bash
+# Deploy tokens
+npx hardhat run scripts/deploy-tokens.js --network sepolia
+
+# Mint tokens to smart account
+npx hardhat run scripts/mint-tokens.js --network sepolia
+
+# Verify contracts
+npx hardhat verify --network sepolia <contract_address>
+```
 
 ## 🤝 Contributing
 
@@ -219,11 +262,11 @@ This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
-- [Privy](https://privy.io) for Smart Wallet infrastructure
+- [Biconomy](https://biconomy.io) for Account Abstraction infrastructure
 - [Alchemy](https://alchemy.com) for RPC services
-- [Pimlico](https://pimlico.io) for Paymaster services
+- [Hardhat](https://hardhat.org) for smart contract development
 - [shadcn/ui](https://ui.shadcn.com) for UI components
 
 ---
 
-**Built with ❤️ using Account Abstraction (EIP-4337)**
+**Built with ❤️ using Biconomy Account Abstraction (EIP-4337)**
