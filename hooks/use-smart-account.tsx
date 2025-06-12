@@ -122,18 +122,24 @@ export function useSmartAccount() {
       });
       console.log("✅ Wallet client created from Privy provider");
 
-      // 3. ✅ Create ECDSA validator - usando walletClient directamente
+      // 3. ✅ Create ECDSA validator - SINTAXIS CORREGIDA con versión explícita
       const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
         signer: walletClient,
-        entryPoint: entryPoint07Address as Address,
+        entryPoint: {
+          address: entryPoint07Address,
+          version: "0.7",
+        },
         kernelVersion: "0.3.1" as const,
       });
       console.log("✅ ECDSA validator created with EntryPoint V07");
 
-      // 4. ✅ Create Kernel account
+      // 4. ✅ Create Kernel account - SINTAXIS CORREGIDA con versión explícita
       const kernelAccount = await createKernelAccount(publicClient, {
         plugins: { sudo: ecdsaValidator },
-        entryPoint: entryPoint07Address as Address,
+        entryPoint: {
+          address: entryPoint07Address,
+          version: "0.7",
+        },
         kernelVersion: "0.3.1" as const,
       });
 
@@ -148,25 +154,34 @@ export function useSmartAccount() {
       }
       console.log("✅ Addresses are different - Account Abstraction working!");
 
-      // 5. ✅ Create paymaster client
+      // 5. ✅ Create paymaster client - SINTAXIS CORREGIDA con versión explícita
       const paymasterClient = createZeroDevPaymasterClient({
         chain: sepolia,
-        entryPoint: entryPoint07Address as Address,
+        entryPoint: {
+          address: entryPoint07Address,
+          version: "0.7",
+        },
         transport: http(ZERODEV_PAYMASTER_RPC),
       });
       console.log("💰 Paymaster client created");
 
-      // 6. ✅ Create Kernel client
+      // 6. ✅ Create Kernel client - SINTAXIS CORREGIDA con versión explícita
       const kernelAccountClient = createKernelAccountClient({
         account: kernelAccount,
         chain: sepolia,
-        entryPoint: entryPoint07Address as Address,
+        entryPoint: {
+          address: entryPoint07Address,
+          version: "0.7",
+        },
         bundlerTransport: http(ZERODEV_BUNDLER_RPC),
         middleware: {
           sponsorUserOperation: async ({ userOperation }: any) => {
             return paymasterClient.sponsorUserOperation({
               userOperation,
-              entryPoint: entryPoint07Address as Address,
+              entryPoint: {
+                address: entryPoint07Address,
+                version: "0.7",
+              },
             });
           },
         },

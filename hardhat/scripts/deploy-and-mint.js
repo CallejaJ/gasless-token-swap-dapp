@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 
 async function main() {
   // ⚠️ CONFIGURACIÓN - Actualiza estos valores
-  const SMART_ACCOUNT_ADDRESS = "0x5F1493A4AbDF23bD08475415444e1bFEc56A8e4F";
+  const SMART_ACCOUNT_ADDRESS = "0xe7BA935750eCaf5D3d4AD96306Eb6820A15da013";
 
   // Direcciones de los contratos desplegados
   const PEPE_ADDRESS = "0xb61a8fbe8036478AD3206439Aa8ff4b2F7769782";
