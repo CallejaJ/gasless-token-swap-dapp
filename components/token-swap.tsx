@@ -19,276 +19,210 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowDownUp, Loader2, ExternalLink, Zap } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Loader2, ArrowDownUp, Zap, Shield } from "lucide-react";
 import { useSmartAccount } from "@/hooks/use-smart-account";
-import { PaymasterStatus } from "@/components/paymaster-status";
 import { parseUnits } from "viem";
+import { toast } from "sonner";
 
 export function TokenSwap() {
-  const { toast } = useToast();
   const {
     tokens,
-    getTokenBalance,
-    executeSwap,
     isSmartWalletReady,
+    executeSwap,
+    getTokenBalance,
     smartAccountAddress,
-    isLoadingBalances,
+    signerAddress,
+    error,
   } = useSmartAccount();
 
-  const [fromToken, setFromToken] = useState(tokens.PEPE);
-  const [toToken, setToToken] = useState(tokens.USDC);
   const [amount, setAmount] = useState("");
   const [isSwapping, setIsSwapping] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [swapError, setSwapError] = useState<string | null>(null);
 
-  const balance = getTokenBalance(fromToken.address);
-
-  // Exchange rate calculation (simplified for demo)
-  const exchangeRate = fromToken.symbol === "PEPE" ? 0.000005 : 200000;
-  const estimatedOutput = amount ? Number(amount) * exchangeRate : 0;
-
-  const handleSwapTokens = () => {
-    const temp = fromToken;
-    setFromToken(toToken);
-    setToToken(temp);
-    setAmount("");
-    setTxHash(null);
-    setSwapError(null);
-  };
+  const fromToken = tokens.PEPE;
+  const toToken = tokens.USDC;
 
   const handleSwap = async () => {
-    if (!amount || Number(amount) <= 0) {
-      toast({
-        title: "Invalid amount",
-        description: "Please enter a valid amount to swap",
-        variant: "destructive",
-      });
+    if (!amount || parseFloat(amount) <= 0) {
+      toast.error("Please enter a valid amount");
       return;
     }
-
-    if (!isSmartWalletReady) {
-      toast({
-        title: "Wallet not ready",
-        description: "Please wait for your smart wallet to initialize",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSwapping(true);
-    setTxHash(null);
-    setSwapError(null);
 
     try {
-      // Parse amount to token units
-      const amountInUnits = parseUnits(amount, fromToken.decimals);
+      setIsSwapping(true);
+      setTxHash(null);
 
-      // Execute gasless swap using smart wallet
-      const txHash = await executeSwap(fromToken, toToken, amountInUnits);
+      const amountBigInt = parseUnits(amount, fromToken.decimals);
+      const hash = await executeSwap(fromToken, toToken, amountBigInt);
 
-      setTxHash(txHash);
-      toast({
-        title: "🎉 Gasless Swap Successful!",
-        description: `Swapped ${amount} ${
-          fromToken.symbol
-        } for ${estimatedOutput.toFixed(6)} ${
-          toToken.symbol
-        }. Gas fees were sponsored!`,
-      });
-
-      // Clear amount after successful swap
+      setTxHash(hash);
+      toast.success("🎉 Gasless swap successful!");
       setAmount("");
-    } catch (error: any) {
-      console.error("Swap error:", error);
-      const errorMessage = error?.message || "Transaction failed";
-      setSwapError(errorMessage);
-
-      toast({
-        title: "Swap failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+    } catch (error) {
+      console.error("Swap failed:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Swap failed. Please try again."
+      );
     } finally {
       setIsSwapping(false);
     }
   };
 
-  const handleRetrySwap = () => {
-    setSwapError(null);
-    handleSwap();
-  };
-
-  const handleMaxClick = () => {
-    if (balance && Number(balance) > 0) {
-      setAmount(balance);
-    }
-  };
-
-  const isSwapDisabled =
-    isSwapping ||
-    !amount ||
-    Number(amount) <= 0 ||
-    !isSmartWalletReady ||
-    !smartAccountAddress ||
-    isLoadingBalances;
+  const pepeBalance = getTokenBalance(fromToken.address);
+  const usdcBalance = getTokenBalance(toToken.address);
 
   return (
-    <div className='w-full space-y-4'>
-      {/* Paymaster Status */}
-      <PaymasterStatus />
+    <Card className='w-full max-w-md mx-auto'>
+      <CardHeader>
+        <div className='flex items-center justify-between'>
+          <CardTitle>Gasless Token Swap</CardTitle>
+          <div className='flex items-center gap-2'>
+            <Zap className='h-4 w-4 text-yellow-500' />
+            <span className='text-xs text-muted-foreground'>
+              ZeroDev OFFICIAL
+            </span>
+          </div>
+        </div>
+        <CardDescription>
+          Swap tokens without paying gas fees using ZeroDev OFFICIAL
+        </CardDescription>
+      </CardHeader>
 
-      <Card className='w-full'>
-        <CardHeader>
-          <CardTitle>Swap Tokens</CardTitle>
-          <CardDescription>Swap tokens without paying gas fees</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className='space-y-6'>
-            <div className='space-y-2'>
-              <div className='flex justify-between'>
-                <Label>From</Label>
-                <span className='text-sm text-muted-foreground'>
-                  Balance: {isLoadingBalances ? "Loading..." : balance}
-                </span>
-              </div>
-              <div className='flex gap-2'>
-                <Select
-                  value={fromToken.symbol}
-                  onValueChange={(value) => {
-                    if (value === "PEPE") setFromToken(tokens.PEPE);
-                    if (value === "USDC") setFromToken(tokens.USDC);
-                  }}
-                >
-                  <SelectTrigger className='w-[120px]'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='PEPE'>PEPE</SelectItem>
-                    <SelectItem value='USDC'>USDC</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className='relative flex-1'>
-                  <Input
-                    type='number'
-                    placeholder='0.0'
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    disabled={!isSmartWalletReady || isLoadingBalances}
-                  />
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={handleMaxClick}
-                    className='absolute right-2 top-1/2 -translate-y-1/2 text-xs h-6 px-2'
-                    disabled={
-                      !balance || Number(balance) <= 0 || isLoadingBalances
-                    }
-                  >
-                    Max
-                  </Button>
-                </div>
-              </div>
+      <CardContent className='space-y-4'>
+        {/* Address Proof */}
+        {signerAddress && smartAccountAddress && (
+          <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-1 text-xs'>
+            <div className='flex items-center gap-2 text-blue-700 dark:text-blue-300'>
+              <Shield className='h-3 w-3' />
+              <span className='font-medium'>Account Abstraction Active</span>
             </div>
-
-            <div className='flex justify-center'>
-              <Button
-                variant='outline'
-                size='icon'
-                onClick={handleSwapTokens}
-                className='rounded-full'
-                disabled={isSwapping}
-              >
-                <ArrowDownUp className='h-4 w-4' />
-              </Button>
-            </div>
-
-            <div className='space-y-2'>
-              <Label>To (estimated)</Label>
-              <div className='flex gap-2'>
-                <Select
-                  value={toToken.symbol}
-                  onValueChange={(value) => {
-                    if (value === "PEPE") setToToken(tokens.PEPE);
-                    if (value === "USDC") setToToken(tokens.USDC);
-                  }}
-                >
-                  <SelectTrigger className='w-[120px]'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='PEPE'>PEPE</SelectItem>
-                    <SelectItem value='USDC'>USDC</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  readOnly
-                  value={estimatedOutput.toFixed(6)}
-                  className='bg-muted'
-                />
+            <div className='font-mono text-[10px] space-y-1 text-blue-600 dark:text-blue-400'>
+              <div>
+                Signer: {signerAddress.slice(0, 6)}...{signerAddress.slice(-4)}
               </div>
-            </div>
-
-            {amount && (
-              <div className='text-sm text-muted-foreground'>
-                1 {fromToken.symbol} ≈ {exchangeRate} {toToken.symbol}
-              </div>
-            )}
-
-            {!isSmartWalletReady && (
-              <div className='flex items-center text-sm text-yellow-600'>
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                Initializing smart wallet...
-              </div>
-            )}
-
-            {smartAccountAddress && (
-              <div className='text-sm text-muted-foreground'>
-                Smart Wallet: {smartAccountAddress.slice(0, 6)}...
+              <div>
+                Smart Account: {smartAccountAddress.slice(0, 6)}...
                 {smartAccountAddress.slice(-4)}
               </div>
-            )}
-          </div>
-        </CardContent>
-        <CardFooter className='flex flex-col gap-4'>
-          <Button
-            onClick={handleSwap}
-            disabled={isSwapDisabled}
-            className='w-full'
-          >
-            {isSwapping ? (
-              <>
-                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                Swapping...
-              </>
-            ) : (
-              "Swap"
-            )}
-          </Button>
-
-          <div className='text-center text-sm text-muted-foreground space-y-1'>
-            <div className='flex items-center justify-center gap-2'>
-              <Zap className='h-4 w-4 text-green-500' />
-              <span>Gas fees sponsored by Paymaster</span>
-            </div>
-            <div className='text-xs opacity-75'>
-              You don't need any ETH for this transaction
+              <div className='text-green-600 dark:text-green-400'>
+                ✓ Different addresses = AA working!
+              </div>
             </div>
           </div>
+        )}
 
-          {txHash && (
+        {/* From Token */}
+        <div className='space-y-2'>
+          <Label>From</Label>
+          <div className='flex gap-2'>
+            <Select value={fromToken.symbol} disabled>
+              <SelectTrigger className='w-[120px]'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={fromToken.symbol}>
+                  {fromToken.symbol}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type='number'
+              placeholder='0.0'
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              disabled={!isSmartWalletReady || isSwapping}
+            />
+          </div>
+          <p className='text-sm text-muted-foreground'>
+            Balance: {pepeBalance} {fromToken.symbol}
+          </p>
+        </div>
+
+        {/* Swap Arrow */}
+        <div className='flex justify-center'>
+          <ArrowDownUp className='h-5 w-5 text-muted-foreground' />
+        </div>
+
+        {/* To Token */}
+        <div className='space-y-2'>
+          <Label>To (estimated)</Label>
+          <div className='flex gap-2'>
+            <Select value={toToken.symbol} disabled>
+              <SelectTrigger className='w-[120px]'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={toToken.symbol}>{toToken.symbol}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type='number'
+              placeholder='0.000000'
+              value={amount ? (parseFloat(amount) * 0.1).toFixed(6) : ""}
+              disabled
+            />
+          </div>
+          <p className='text-sm text-muted-foreground'>
+            Balance: {usdcBalance} {toToken.symbol}
+          </p>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3'>
+            <p className='text-sm text-red-600 dark:text-red-400'>{error}</p>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {txHash && (
+          <div className='bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3'>
+            <p className='text-sm text-green-600 dark:text-green-400'>
+              ✅ Transaction successful!
+            </p>
             <a
               href={`https://sepolia.etherscan.io/tx/${txHash}`}
               target='_blank'
               rel='noopener noreferrer'
-              className='flex items-center justify-center gap-1 text-sm hover:text-primary transition-colors'
+              className='text-xs text-blue-600 hover:underline break-all'
             >
-              View transaction details <ExternalLink className='h-3 w-3' />
+              View on Etherscan
             </a>
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className='flex flex-col gap-2'>
+        <Button
+          onClick={handleSwap}
+          disabled={!isSmartWalletReady || isSwapping || !amount}
+          className='w-full'
+          size='lg'
+        >
+          {isSwapping ? (
+            <>
+              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              Swapping (Gasless)...
+            </>
+          ) : (
+            <>
+              <Zap className='mr-2 h-4 w-4' />
+              Swap (Gasless)
+            </>
           )}
-        </CardFooter>
-      </Card>
-    </div>
+        </Button>
+
+        <div className='text-center space-y-1'>
+          <p className='text-xs text-muted-foreground'>
+            💰 Gas fees sponsored by ZeroDev OFFICIAL (EntryPoint V07)
+          </p>
+          <p className='text-xs text-green-600 dark:text-green-400'>
+            Using ZeroDev SDK v5.4 + permissionless v0.2.10 + Privy v2.10
+          </p>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

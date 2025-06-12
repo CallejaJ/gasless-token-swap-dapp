@@ -20,7 +20,6 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useSmartAccount } from "@/hooks/use-smart-account";
-import { FaucetButton } from "@/components/faucet-button";
 
 export function WalletConnect() {
   const { ready, authenticated, user, login, logout } = usePrivy();
@@ -34,6 +33,7 @@ export function WalletConnect() {
     tokens,
     hasSmartWallets,
     error,
+    signerAddress,
   } = useSmartAccount();
 
   // Show loading state while Privy is initializing
@@ -68,7 +68,7 @@ export function WalletConnect() {
           </CardTitle>
           <CardDescription>
             Connect your wallet to start swapping tokens with gasless
-            transactions
+            transactions powered by ZeroDev OFFICIAL v5.4 + EntryPoint V07
           </CardDescription>
         </CardHeader>
         <CardFooter>
@@ -80,7 +80,7 @@ export function WalletConnect() {
     );
   }
 
-  // ✅ Detectar embedded wallet vs injected wallets
+  // ✅ Detect embedded wallet vs injected wallets
   const embeddedWallet = wallets?.find(
     (wallet) =>
       wallet.walletClientType === "privy" && wallet.connectorType === "embedded"
@@ -120,7 +120,7 @@ export function WalletConnect() {
           </div>
         </CardTitle>
         <CardDescription>
-          Your wallet is connected on Sepolia Testnet
+          Your wallet is connected on Sepolia Testnet with ZeroDev OFFICIAL v5.4
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -132,11 +132,11 @@ export function WalletConnect() {
                 <AlertTriangle className='h-5 w-5 text-yellow-600 mt-0.5' />
                 <div>
                   <div className='text-sm font-medium text-yellow-800 dark:text-yellow-200'>
-                    Embedded Wallet Required for Gasless Transactions
+                    Embedded Wallet Required for ZeroDev Gasless Transactions
                   </div>
                   <p className='text-xs text-yellow-600 dark:text-yellow-300 mt-1'>
                     You're using an external wallet (MetaMask, etc). To enable
-                    gasless transactions, please disconnect and reconnect using
+                    gasless transactions with ZeroDev, please disconnect and reconnect using
                     Privy's embedded wallet option.
                   </p>
                 </div>
@@ -150,7 +150,7 @@ export function WalletConnect() {
               <div className='flex items-center gap-2 text-sm text-green-800 dark:text-green-200'>
                 <CheckCircle className='h-4 w-4' />
                 <span>
-                  Embedded wallet active - gasless transactions enabled!
+                  Embedded wallet active - ZeroDev OFFICIAL v5.4 gasless transactions enabled!
                 </span>
               </div>
             </div>
@@ -165,17 +165,17 @@ export function WalletConnect() {
               </span>
             </div>
 
-            {/* ✅ Show active wallet info */}
+            {/* ✅ Show signer wallet info (embedded wallet) */}
             {hasEmbeddedWallet && (
               <div className='flex justify-between items-center'>
                 <span className='text-sm text-muted-foreground'>
-                  Active Wallet (Embedded)
+                  Signer Wallet (Embedded)
                 </span>
                 <a
                   href={`https://sepolia.etherscan.io/address/${embeddedWallet.address}`}
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='flex items-center gap-1 text-sm font-mono hover:text-primary text-green-600'
+                  className='flex items-center gap-1 text-sm font-mono hover:text-primary text-blue-600'
                 >
                   {formatAddress(embeddedWallet.address)}
                   <ExternalLink className='h-3 w-3' />
@@ -202,13 +202,13 @@ export function WalletConnect() {
             {smartAccountAddress ? (
               <div className='flex justify-between items-center'>
                 <span className='text-sm text-muted-foreground'>
-                  Smart Account (Biconomy)
+                  ZeroDev Smart Account
                 </span>
                 <a
                   href={`https://sepolia.etherscan.io/address/${smartAccountAddress}`}
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='flex items-center gap-1 text-sm font-mono hover:text-primary'
+                  className='flex items-center gap-1 text-sm font-mono hover:text-primary text-green-600'
                 >
                   {formatAddress(smartAccountAddress)}
                   <ExternalLink className='h-3 w-3' />
@@ -217,18 +217,36 @@ export function WalletConnect() {
             ) : (
               <div className='flex justify-between items-center'>
                 <span className='text-sm text-muted-foreground'>
-                  Smart Account
+                  ZeroDev Smart Account
                 </span>
                 <span className='text-sm text-yellow-600 flex items-center gap-1'>
                   {hasEmbeddedWallet ? (
                     <>
                       <Loader2 className='h-3 w-3 animate-spin' />
-                      Initializing...
+                      Creating...
                     </>
                   ) : (
                     "Requires embedded wallet"
                   )}
                 </span>
+              </div>
+            )}
+
+            {/* ✅ Show address comparison if both exist */}
+            {smartAccountAddress && signerAddress && smartAccountAddress !== signerAddress && (
+              <div className='p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-xs'>
+                <p className='text-green-700 dark:text-green-300'>
+                  ✅ Account Abstraction working: Smart Account has different address than signer
+                </p>
+              </div>
+            )}
+
+            {/* ❌ Warning if addresses are the same */}
+            {smartAccountAddress && signerAddress && smartAccountAddress === signerAddress && (
+              <div className='p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs'>
+                <p className='text-red-700 dark:text-red-300'>
+                  ❌ Warning: Addresses should be different for Account Abstraction
+                </p>
               </div>
             )}
 
@@ -238,7 +256,7 @@ export function WalletConnect() {
               </span>
               <span className='text-sm'>
                 {hasSmartWallets
-                  ? "Smart Account (Biconomy + ERC-4337)"
+                  ? "ZeroDev OFFICIAL v5.4 Kernel v3.1 (EIP-4337 V07)"
                   : hasEmbeddedWallet
                   ? "Embedded Wallet"
                   : "External Wallet"}
@@ -247,7 +265,7 @@ export function WalletConnect() {
 
             <div className='flex justify-between items-center'>
               <span className='text-sm text-muted-foreground'>
-                Gasless Status
+                Paymaster Status
               </span>
               <span
                 className={`text-sm ${
@@ -259,7 +277,7 @@ export function WalletConnect() {
                 }`}
               >
                 {isSmartWalletReady
-                  ? "Ready ✅"
+                  ? "Sponsored ✅"
                   : hasEmbeddedWallet
                   ? "Initializing..."
                   : "Not Available ❌"}
@@ -283,7 +301,7 @@ export function WalletConnect() {
           {smartAccountAddress && (
             <div className='space-y-3'>
               <div className='text-sm text-muted-foreground'>
-                Smart Account Balances
+                ZeroDev OFFICIAL v5.4 Smart Account Balances
               </div>
               {isLoadingBalances ? (
                 <div className='flex items-center justify-center p-4'>
@@ -307,13 +325,6 @@ export function WalletConnect() {
                         Mock Pepe Token
                       </div>
                     </div>
-                    <div className='ml-4'>
-                      <FaucetButton
-                        tokenSymbol='PEPE'
-                        tokenAddress={tokens.PEPE.address}
-                        onSuccess={fetchBalances}
-                      />
-                    </div>
                   </div>
 
                   {/* USDC Token */}
@@ -331,20 +342,12 @@ export function WalletConnect() {
                         Mock USD Coin
                       </div>
                     </div>
-                    <div className='ml-4'>
-                      <FaucetButton
-                        tokenSymbol='USDC'
-                        tokenAddress={tokens.USDC.address}
-                        onSuccess={fetchBalances}
-                      />
-                    </div>
                   </div>
 
                   {/* Info about tokens */}
                   <div className='mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs'>
                     <p className='text-blue-700 dark:text-blue-300'>
-                      💡 Use the faucet buttons to get free test tokens (once
-                      every 24 hours)
+                      💡 Use testnet faucets to get tokens for testing ZeroDev OFFICIAL v5.4
                     </p>
                   </div>
                 </div>
@@ -356,8 +359,7 @@ export function WalletConnect() {
           {isSmartWalletReady && (
             <div className='p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md'>
               <div className='text-sm text-green-800 dark:text-green-200'>
-                ✅ Biconomy Smart Account ready! You can now swap tokens without
-                gas fees.
+                ✅ ZeroDev OFFICIAL v5.4 Smart Account ready! All transactions will be gasless and sponsored by the paymaster.
               </div>
             </div>
           )}

@@ -13,7 +13,6 @@ export function PrivyProviderWrapper({
 }) {
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 
-  // Crear QueryClient en el cliente para evitar problemas de hidratación
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -25,7 +24,6 @@ export function PrivyProviderWrapper({
       })
   );
 
-  // Si no hay App ID configurado, mostrar mensaje de error
   if (!appId || appId === "your-app-id-here") {
     return (
       <div className='min-h-screen flex items-center justify-center bg-background'>
@@ -46,25 +44,30 @@ export function PrivyProviderWrapper({
       <PrivyProvider
         appId={appId}
         config={{
+          // ✅ Configuración OFICIAL SIMPLIFICADA según documentación
           appearance: {
             theme: "dark",
             accentColor: "#676FFF",
-            showWalletLoginFirst: false,
           },
+
+          // ✅ Embedded wallets con configuración MÍNIMA recomendada
           embeddedWallets: {
             createOnLogin: "users-without-wallets",
-            requireUserPasswordOnCreate: false,
+            noPromptOnSignature: true, // CRÍTICO para Account Abstraction
           },
+
+          // ✅ Chain configuration básica
           defaultChain: sepolia,
           supportedChains: [sepolia],
-          loginMethods: ["email", "wallet", "sms", "google"],
+
+          // ✅ Login methods básicos
+          loginMethods: ["email", "wallet"],
         }}
       >
-        {/* Banner informativo sobre Smart Wallets */}
         <div className='bg-gradient-to-r from-green-500/10 via-blue-500/10 to-purple-500/10 border-b border-green-200 dark:border-green-800 p-3'>
           <div className='text-center text-sm text-green-800 dark:text-green-200'>
-            ⚡ <strong>Smart Wallets enabled!</strong> Gas-free transactions now
-            available.
+            ⚡ <strong>ZeroDev OFFICIAL v5.4 + EntryPoint V07 enabled!</strong>{" "}
+            Account Abstraction ready.
           </div>
         </div>
         {children}
