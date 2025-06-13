@@ -42,6 +42,20 @@ const ZERODEV_BUNDLER_RPC = process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC!;
 const ZERODEV_PAYMASTER_RPC = process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC!;
 const SEPOLIA_RPC_URL = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL!;
 
+// ✅ DEX ABI CORREGIDO
+const dexAbi = [
+  {
+    name: "swap",
+    type: "function",
+    inputs: [
+      { name: "tokenIn", type: "address" },
+      { name: "tokenOut", type: "address" },
+      { name: "amountIn", type: "uint256" },
+    ],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+  },
+] as const;
+
 interface Token {
   symbol: string;
   name: string;
@@ -165,7 +179,7 @@ export function useSmartAccount() {
       });
       console.log("💰 Paymaster client created");
 
-      // 6. ✅ Create Kernel client - SINTAXIS CORREGIDA con versión explícita
+      // 6. ✅ Create Kernel client - CAMBIO CRÍTICO: Usar paymaster directamente
       const kernelAccountClient = createKernelAccountClient({
         account: kernelAccount,
         chain: sepolia,
@@ -174,17 +188,7 @@ export function useSmartAccount() {
           version: "0.7",
         },
         bundlerTransport: http(ZERODEV_BUNDLER_RPC),
-        middleware: {
-          sponsorUserOperation: async ({ userOperation }: any) => {
-            return paymasterClient.sponsorUserOperation({
-              userOperation,
-              entryPoint: {
-                address: entryPoint07Address,
-                version: "0.7",
-              },
-            });
-          },
-        },
+        paymaster: paymasterClient, // CAMBIO: usar paymaster directamente
       });
 
       console.log("✅ ZeroDev Kernel Account ready!");
@@ -298,11 +302,11 @@ export function useSmartAccount() {
       } catch (error: any) {
         console.error("❌ Transaction failed:", error);
 
-        if (
-          error.message?.includes("insufficient funds") ||
-          error.message?.includes("paymaster")
-        ) {
-          throw new Error("❌ Paymaster has insufficient funds");
+        // No lanzar error de paymaster si la simulación falla
+        if (error.message?.includes("reverted during simulation")) {
+          throw new Error(
+            "Transaction reverted - check contract function and parameters"
+          );
         }
 
         throw error;
@@ -324,22 +328,98 @@ export function useSmartAccount() {
     [executeTransaction]
   );
 
-  // ✅ Complete gasless swap
+  // ✅ Complete gasless swap - VERIFICAR LIQUIDEZ PRIMERO
   const executeSwap = useCallback(
     async (fromToken: Token, toToken: Token, amount: bigint) => {
-      if (!kernelClient) {
+      if (!kernelClient || !smartAccountAddress) {
         throw new Error("Kernel client not ready");
       }
 
       console.log("🔄 Starting gasless swap...");
+      console.log("   From:", fromToken.symbol, fromToken.address);
+      console.log("   To:", toToken.symbol, toToken.address);
+      console.log(
+        "   Amount:",
+        formatUnits(amount, fromToken.decimals),
+        fromToken.symbol
+      );
 
       try {
+        // 0. Verificar reservas del DEX
+        const dexReserves = await publicClient.readContract({
+          address: DEX_CONTRACT as Address,
+          abi: [
+            {
+              name: "getReserves",
+              type: "function",
+              inputs: [],
+              outputs: [
+                { name: "_pepeReserve", type: "uint256" },
+                { name: "_usdcReserve", type: "uint256" },
+              ],
+              stateMutability: "view",
+            },
+          ],
+          functionName: "getReserves",
+        });
+
+        console.log("📊 DEX Reserves:");
+        console.log("   PEPE:", formatUnits(dexReserves[0], 18));
+        console.log("   USDC:", formatUnits(dexReserves[1], 6));
+
+        // Calcular cuánto USDC recibirás
+        const expectedUsdc = await publicClient.readContract({
+          address: DEX_CONTRACT as Address,
+          abi: [
+            {
+              name: "calculatePepeToUsdc",
+              type: "function",
+              inputs: [{ name: "_pepeAmount", type: "uint256" }],
+              outputs: [{ type: "uint256" }],
+              stateMutability: "pure",
+            },
+          ],
+          functionName: "calculatePepeToUsdc",
+          args: [amount],
+        });
+
+        console.log(
+          "💱 Expected output:",
+          formatUnits(expectedUsdc, 6),
+          "USDC"
+        );
+
+        if (dexReserves[1] < expectedUsdc) {
+          throw new Error(
+            `DEX has insufficient USDC liquidity. Needs ${formatUnits(
+              expectedUsdc,
+              6
+            )} but has ${formatUnits(dexReserves[1], 6)}`
+          );
+        }
+
         // 1. Gasless approval
         console.log("1️⃣ Gasless approval...");
-        await executeApproval(fromToken.address, amount);
+        const approvalTx = await executeApproval(fromToken.address, amount);
+        console.log("✅ Approval tx:", approvalTx);
 
-        // Wait a bit for confirmation
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        // Esperar confirmación de la aprobación
+        await publicClient.waitForTransactionReceipt({
+          hash: approvalTx,
+          confirmations: 1,
+        });
+
+        // Verificar allowance
+        const allowance = await publicClient.readContract({
+          address: fromToken.address,
+          abi: erc20Abi,
+          functionName: "allowance",
+          args: [smartAccountAddress, DEX_CONTRACT as Address],
+        });
+        console.log(
+          "✅ Allowance confirmed:",
+          formatUnits(allowance, fromToken.decimals)
+        );
 
         // 2. Gasless swap
         console.log("2️⃣ Gasless swap...");
@@ -361,6 +441,8 @@ export function useSmartAccount() {
           swapData
         );
 
+        console.log("🎉 Swap successful! Tx:", txHash);
+
         // Refresh balances after successful swap
         setTimeout(fetchBalances, 5000);
 
@@ -370,7 +452,14 @@ export function useSmartAccount() {
         throw error;
       }
     },
-    [kernelClient, executeTransaction, executeApproval, fetchBalances]
+    [
+      kernelClient,
+      executeTransaction,
+      executeApproval,
+      fetchBalances,
+      publicClient,
+      smartAccountAddress,
+    ]
   );
 
   const getTokenBalance = useCallback(
