@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, ArrowDownUp, Shield } from "lucide-react";
+import { Loader2, ArrowDownUp, Shield, RotateCcw } from "lucide-react";
 import { useSmartAccount } from "@/hooks/use-smart-account";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
@@ -33,14 +33,45 @@ export function TokenSwap() {
     smartAccountAddress,
     signerAddress,
     error,
+    fetchBalances,
   } = useSmartAccount();
 
   const [amount, setAmount] = useState("");
   const [isSwapping, setIsSwapping] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [fromTokenSymbol, setFromTokenSymbol] = useState<"PEPE" | "USDC">(
+    "PEPE"
+  );
+  const [toTokenSymbol, setToTokenSymbol] = useState<"PEPE" | "USDC">("USDC");
 
-  const fromToken = tokens.PEPE;
-  const toToken = tokens.USDC;
+  const fromToken = tokens[fromTokenSymbol];
+  const toToken = tokens[toTokenSymbol];
+
+  // Swap direction handler
+  const handleSwapDirection = () => {
+    setFromTokenSymbol(toTokenSymbol);
+    setToTokenSymbol(fromTokenSymbol);
+    setAmount(""); // Clear amount when swapping direction
+    setTxHash(null); // Clear previous transaction
+  };
+
+  // Calculate estimated output (should match contract calculation)
+  const getEstimatedOutput = () => {
+    if (!amount || parseFloat(amount) <= 0) return "";
+
+    // These should match your DEX contract's actual rates
+    if (fromTokenSymbol === "PEPE") {
+      // PEPE to USDC: Based on your DEX contract logic
+      // If 1 PEPE = 0.0001 USDC, then this is a rough estimate
+      const estimated = parseFloat(amount) * 0.0001;
+      return estimated.toFixed(6);
+    } else {
+      // USDC to PEPE: Based on your DEX contract logic
+      // The contract seems to have a different rate, let's be more conservative
+      const estimated = parseFloat(amount) * 10000; // 1 USDC = 10,000 PEPE
+      return estimated.toFixed(2);
+    }
+  };
 
   const handleSwap = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -58,6 +89,16 @@ export function TokenSwap() {
       setTxHash(hash);
       toast.success("🎉 Gasless swap successful!");
       setAmount("");
+
+      // Force immediate balance refresh
+      setTimeout(() => {
+        fetchBalances();
+      }, 2000);
+
+      // Additional refresh after block confirmation
+      setTimeout(() => {
+        fetchBalances();
+      }, 8000);
     } catch (error) {
       console.error("Swap failed:", error);
       toast.error(
@@ -70,8 +111,8 @@ export function TokenSwap() {
     }
   };
 
-  const pepeBalance = getTokenBalance(fromToken.address);
-  const usdcBalance = getTokenBalance(toToken.address);
+  const fromBalance = getTokenBalance(fromToken.address);
+  const toBalance = getTokenBalance(toToken.address);
 
   return (
     <Card className='w-full max-w-md mx-auto'>
@@ -121,14 +162,20 @@ export function TokenSwap() {
         <div className='space-y-2'>
           <Label>From</Label>
           <div className='flex gap-2'>
-            <Select value={fromToken.symbol} disabled>
+            <Select
+              value={fromTokenSymbol}
+              onValueChange={(value: "PEPE" | "USDC") => {
+                if (value !== toTokenSymbol) {
+                  setFromTokenSymbol(value);
+                }
+              }}
+            >
               <SelectTrigger className='w-[120px]'>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={fromToken.symbol}>
-                  {fromToken.symbol}
-                </SelectItem>
+                <SelectItem value='PEPE'>PEPE</SelectItem>
+                <SelectItem value='USDC'>USDC</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -140,36 +187,52 @@ export function TokenSwap() {
             />
           </div>
           <p className='text-sm text-muted-foreground'>
-            Balance: {pepeBalance} {fromToken.symbol}
+            Balance: {fromBalance} {fromToken.symbol}
           </p>
         </div>
 
-        {/* Swap Arrow */}
+        {/* Swap Direction Button */}
         <div className='flex justify-center'>
-          <ArrowDownUp className='h-5 w-5 text-muted-foreground' />
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={handleSwapDirection}
+            disabled={isSwapping}
+            className='p-2 h-auto'
+          >
+            <RotateCcw className='h-4 w-4' />
+          </Button>
         </div>
 
         {/* To Token */}
         <div className='space-y-2'>
           <Label>To (estimated)</Label>
           <div className='flex gap-2'>
-            <Select value={toToken.symbol} disabled>
+            <Select
+              value={toTokenSymbol}
+              onValueChange={(value: "PEPE" | "USDC") => {
+                if (value !== fromTokenSymbol) {
+                  setToTokenSymbol(value);
+                }
+              }}
+            >
               <SelectTrigger className='w-[120px]'>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={toToken.symbol}>{toToken.symbol}</SelectItem>
+                <SelectItem value='PEPE'>PEPE</SelectItem>
+                <SelectItem value='USDC'>USDC</SelectItem>
               </SelectContent>
             </Select>
             <Input
               type='number'
               placeholder='0.000000'
-              value={amount ? (parseFloat(amount) * 0.1).toFixed(6) : ""}
+              value={getEstimatedOutput()}
               disabled
             />
           </div>
           <p className='text-sm text-muted-foreground'>
-            Balance: {usdcBalance} {toToken.symbol}
+            Balance: {toBalance} {toToken.symbol}
           </p>
         </div>
 
@@ -217,7 +280,7 @@ export function TokenSwap() {
                 alt='Gasless Token Swap'
                 className='mr-2 h-4 w-4'
               />
-              Swap (Gasless)
+              Swap {fromTokenSymbol} → {toTokenSymbol} (Gasless)
             </>
           )}
         </Button>

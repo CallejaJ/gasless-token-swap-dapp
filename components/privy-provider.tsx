@@ -44,24 +44,26 @@ export function PrivyProviderWrapper({
       <PrivyProvider
         appId={appId}
         config={{
-          // ✅ Configuración OFICIAL SIMPLIFICADA según documentación
           appearance: {
             theme: "dark",
             accentColor: "#676FFF",
           },
 
-          // ✅ Embedded wallets con configuración MÍNIMA recomendada
           embeddedWallets: {
             createOnLogin: "users-without-wallets",
-            noPromptOnSignature: true, // CRÍTICO para Account Abstraction
           },
 
-          // ✅ Chain configuration básica
           defaultChain: sepolia,
           supportedChains: [sepolia],
 
-          // ✅ Login methods básicos
+          // ✅ Basic login methods
           loginMethods: ["email", "wallet"],
+
+          // ✅ If you need to disable signature prompts, use this instead:
+          // (Optional - only uncomment if necessary)
+          mfa: {
+            noPromptOnMfaRequired: false,
+          },
         }}
       >
         <div className='bg-gradient-to-r from-green-500/10 via-blue-500/10 to-purple-500/10 border-b border-green-200 dark:border-green-800 p-3'>
