@@ -194,25 +194,17 @@ export function useSmartAccount() {
       }
       console.log("✅ Addresses are different - Account Abstraction working!");
 
-      // 5. ✅ Create paymaster client - CORRECTED SYNTAX with explicit version
+      // 5. ✅ Create paymaster client - Simplified configuration
       const paymasterClient = createZeroDevPaymasterClient({
         chain: sepolia,
-        entryPoint: {
-          address: entryPoint07Address,
-          version: "0.7",
-        },
         transport: http(ZERODEV_PAYMASTER_RPC),
       });
       console.log("💰 Paymaster client created");
 
-      // 6. ✅ Create Kernel client - CRITICAL CHANGE: Use paymaster directly
+      // 6. ✅ Create Kernel client - EntryPoint inherited from kernelAccount
       const kernelAccountClient = createKernelAccountClient({
         account: kernelAccount,
         chain: sepolia,
-        entryPoint: {
-          address: entryPoint07Address,
-          version: "0.7",
-        },
         bundlerTransport: http(ZERODEV_BUNDLER_RPC),
         paymaster: paymasterClient, // CHANGE: use paymaster directly
       });
@@ -256,11 +248,11 @@ export function useSmartAccount() {
     if (!publicClient) return null;
 
     try {
-      const reserves = await publicClient.readContract({
+      const reserves = (await publicClient.readContract({
         address: DEX_CONTRACT as Address,
         abi: dexAbi,
         functionName: "getReserves",
-      });
+      })) as readonly [bigint, bigint];
 
       return {
         pepeReserve: formatUnits(reserves[0], 18),
@@ -284,20 +276,20 @@ export function useSmartAccount() {
           fromToken.symbol === "PEPE" && toToken.symbol === "USDC";
 
         if (isPepeToUsdc) {
-          const output = await publicClient.readContract({
+          const output = (await publicClient.readContract({
             address: DEX_CONTRACT as Address,
             abi: dexAbi,
             functionName: "calculatePepeToUsdc",
             args: [amount],
-          });
+          })) as bigint;
           return formatUnits(output, 6);
         } else {
-          const output = await publicClient.readContract({
+          const output = (await publicClient.readContract({
             address: DEX_CONTRACT as Address,
             abi: dexAbi,
             functionName: "calculateUsdcToPepe",
             args: [amount],
-          });
+          })) as bigint;
           return formatUnits(output, 18);
         }
       } catch (error) {
@@ -307,6 +299,7 @@ export function useSmartAccount() {
     },
     [publicClient]
   );
+
   // ✅ Improved fetch balances with better error handling
   const fetchBalances = useCallback(async () => {
     if (!smartAccountAddress) return;
@@ -323,9 +316,9 @@ export function useSmartAccount() {
         abi: erc20Abi,
         client: publicClient,
       });
-      const pepeBalance = await pepeContract.read.balanceOf([
+      const pepeBalance = (await pepeContract.read.balanceOf([
         smartAccountAddress,
-      ]);
+      ])) as bigint;
       newBalances[PEPE_ADDRESS] = formatUnits(
         pepeBalance,
         TOKENS.PEPE.decimals
@@ -338,9 +331,9 @@ export function useSmartAccount() {
         abi: erc20Abi,
         client: publicClient,
       });
-      const usdcBalance = await usdcContract.read.balanceOf([
+      const usdcBalance = (await usdcContract.read.balanceOf([
         smartAccountAddress,
-      ]);
+      ])) as bigint;
       newBalances[USDC_ADDRESS] = formatUnits(
         usdcBalance,
         TOKENS.USDC.decimals
@@ -448,11 +441,11 @@ export function useSmartAccount() {
         console.log("🔍 DEBUG: From token decimals:", fromToken.decimals);
         console.log("🔍 DEBUG: To token decimals:", toToken.decimals);
 
-        const dexReserves = await publicClient.readContract({
+        const dexReserves = (await publicClient.readContract({
           address: DEX_CONTRACT as Address,
           abi: dexAbi,
           functionName: "getReserves",
-        });
+        })) as readonly [bigint, bigint];
 
         console.log("📊 DEX Reserves (raw):");
         console.log("   PEPE (raw):", dexReserves[0].toString());
@@ -466,12 +459,12 @@ export function useSmartAccount() {
         let reserveCheck: bigint;
 
         if (isPepeToUsdc) {
-          expectedOutput = await publicClient.readContract({
+          expectedOutput = (await publicClient.readContract({
             address: DEX_CONTRACT as Address,
             abi: dexAbi,
             functionName: "calculatePepeToUsdc",
             args: [amount],
-          });
+          })) as bigint;
           reserveCheck = dexReserves[1]; // USDC reserve
           console.log(
             "💱 Expected USDC output (raw):",
@@ -487,12 +480,12 @@ export function useSmartAccount() {
             "🔍 DEBUG: Calling calculateUsdcToPepe with amount:",
             amount.toString()
           );
-          expectedOutput = await publicClient.readContract({
+          expectedOutput = (await publicClient.readContract({
             address: DEX_CONTRACT as Address,
             abi: dexAbi,
             functionName: "calculateUsdcToPepe",
             args: [amount],
-          });
+          })) as bigint;
           reserveCheck = dexReserves[0]; // PEPE reserve
           console.log(
             "💱 Expected PEPE output (raw):",
@@ -556,12 +549,12 @@ export function useSmartAccount() {
         });
 
         // Verify allowance
-        const allowance = await publicClient.readContract({
+        const allowance = (await publicClient.readContract({
           address: fromToken.address,
           abi: erc20Abi,
           functionName: "allowance",
           args: [smartAccountAddress, DEX_CONTRACT as Address],
-        });
+        })) as bigint;
         console.log(
           "✅ Allowance confirmed:",
           formatUnits(allowance, fromToken.decimals)
