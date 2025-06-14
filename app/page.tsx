@@ -1,18 +1,16 @@
 import { WalletConnect } from "@/components/wallet-connect";
 import { TokenSwap } from "@/components/token-swap";
-import { ModeToggle } from "@/components/mode-toggle";
+import { Header } from "@/components/header";
 
 export default function Page() {
   return (
-    <div className='container mx-auto py-10 px-4'>
-      <div className='flex justify-between items-center mb-8'>
-        <h1 className='text-3xl font-bold'>Gasless Token Swap</h1>
-        <ModeToggle />
-      </div>
-
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-        <WalletConnect />
-        <TokenSwap />
+    <div className='min-h-screen'>
+      <Header />
+      <div className='container mx-auto py-10 px-4'>
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+          <WalletConnect />
+          <TokenSwap />
+        </div>
       </div>
     </div>
   );

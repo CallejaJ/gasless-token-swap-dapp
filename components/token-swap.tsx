@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, ArrowDownUp, Zap, Shield } from "lucide-react";
+import { Loader2, ArrowDownUp, Shield } from "lucide-react";
 import { useSmartAccount } from "@/hooks/use-smart-account";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
@@ -79,7 +79,11 @@ export function TokenSwap() {
         <div className='flex items-center justify-between'>
           <CardTitle>Gasless Token Swap</CardTitle>
           <div className='flex items-center gap-2'>
-            <Zap className='h-4 w-4 text-yellow-500' />
+            <img
+              src='/gasless-token-swap.png'
+              alt='Gasless Token Swap'
+              className='h-4 w-4'
+            />
             <span className='text-xs text-muted-foreground'>
               ZeroDev OFFICIAL
             </span>
@@ -208,7 +212,11 @@ export function TokenSwap() {
             </>
           ) : (
             <>
-              <Zap className='mr-2 h-4 w-4' />
+              <img
+                src='/gasless-token-swap.png'
+                alt='Gasless Token Swap'
+                className='mr-2 h-4 w-4'
+              />
               Swap (Gasless)
             </>
           )}
