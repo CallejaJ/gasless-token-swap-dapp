@@ -15,6 +15,7 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { erc20Abi } from "abitype/abis";
+import { emitBalanceUpdate } from "@/lib/events"; // Add this import
 
 // ✅ CORRECTED IMPORTS for permissionless@0.2.10 + ZeroDev
 import {
@@ -116,6 +117,9 @@ export function useSmartAccount() {
   const [kernelClient, setKernelClient] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(false);
 
+  // 🎨 Simple signing info state
+  const [showSigningInfo, setShowSigningInfo] = useState(false);
+
   // ✅ Public client
   const publicClient = useMemo(() => {
     return createPublicClient({
@@ -154,7 +158,7 @@ export function useSmartAccount() {
         throw new Error("Failed to get Ethereum provider from embedded wallet");
       }
 
-      // 2. ✅ Create wallet client from provider (NEW SYNTAX)
+      // 2. ✅ Create wallet client from provider
       const walletClient = createWalletClient({
         account: embeddedWallet.address as Address,
         chain: sepolia,
@@ -162,7 +166,7 @@ export function useSmartAccount() {
       });
       console.log("✅ Wallet client created from Privy provider");
 
-      // 3. ✅ Create ECDSA validator - CORRECTED SYNTAX with explicit version
+      // 3. ✅ Create ECDSA validator
       const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
         signer: walletClient,
         entryPoint: {
@@ -173,7 +177,7 @@ export function useSmartAccount() {
       });
       console.log("✅ ECDSA validator created with EntryPoint V07");
 
-      // 4. ✅ Create Kernel account - CORRECTED SYNTAX with explicit version
+      // 4. ✅ Create Kernel account
       const kernelAccount = await createKernelAccount(publicClient, {
         plugins: { sudo: ecdsaValidator },
         entryPoint: {
@@ -194,19 +198,19 @@ export function useSmartAccount() {
       }
       console.log("✅ Addresses are different - Account Abstraction working!");
 
-      // 5. ✅ Create paymaster client - Simplified configuration
+      // 5. ✅ Create paymaster client
       const paymasterClient = createZeroDevPaymasterClient({
         chain: sepolia,
         transport: http(ZERODEV_PAYMASTER_RPC),
       });
       console.log("💰 Paymaster client created");
 
-      // 6. ✅ Create Kernel client - EntryPoint inherited from kernelAccount
+      // 6. ✅ Create Kernel client
       const kernelAccountClient = createKernelAccountClient({
         account: kernelAccount,
         chain: sepolia,
         bundlerTransport: http(ZERODEV_BUNDLER_RPC),
-        paymaster: paymasterClient, // CHANGE: use paymaster directly
+        paymaster: paymasterClient,
       });
 
       console.log("✅ ZeroDev Kernel Account ready!");
@@ -341,6 +345,9 @@ export function useSmartAccount() {
       console.log("✅ USDC balance:", newBalances[USDC_ADDRESS]);
 
       setBalances(newBalances);
+
+      // Emit event to notify other components
+      emitBalanceUpdate();
     } catch (err) {
       console.error("❌ Balance fetch failed:", err);
       setBalances({
@@ -436,20 +443,13 @@ export function useSmartAccount() {
       );
 
       try {
-        // 0. Verify DEX reserves and add better debugging
-        console.log("🔍 DEBUG: Raw amount passed:", amount.toString());
-        console.log("🔍 DEBUG: From token decimals:", fromToken.decimals);
-        console.log("🔍 DEBUG: To token decimals:", toToken.decimals);
-
+        // 0. Verify DEX reserves
         const dexReserves = (await publicClient.readContract({
           address: DEX_CONTRACT as Address,
           abi: dexAbi,
           functionName: "getReserves",
         })) as readonly [bigint, bigint];
 
-        console.log("📊 DEX Reserves (raw):");
-        console.log("   PEPE (raw):", dexReserves[0].toString());
-        console.log("   USDC (raw):", dexReserves[1].toString());
         console.log("📊 DEX Reserves (formatted):");
         console.log("   PEPE:", formatUnits(dexReserves[0], 18));
         console.log("   USDC:", formatUnits(dexReserves[1], 6));
@@ -466,20 +466,7 @@ export function useSmartAccount() {
             args: [amount],
           })) as bigint;
           reserveCheck = dexReserves[1]; // USDC reserve
-          console.log(
-            "💱 Expected USDC output (raw):",
-            expectedOutput.toString()
-          );
-          console.log(
-            "💱 Expected USDC output (formatted):",
-            formatUnits(expectedOutput, 6)
-          );
-          console.log("🔍 USDC Reserve check (raw):", reserveCheck.toString());
         } else {
-          console.log(
-            "🔍 DEBUG: Calling calculateUsdcToPepe with amount:",
-            amount.toString()
-          );
           expectedOutput = (await publicClient.readContract({
             address: DEX_CONTRACT as Address,
             abi: dexAbi,
@@ -487,55 +474,12 @@ export function useSmartAccount() {
             args: [amount],
           })) as bigint;
           reserveCheck = dexReserves[0]; // PEPE reserve
-          console.log(
-            "💱 Expected PEPE output (raw):",
-            expectedOutput.toString()
-          );
-          console.log(
-            "💱 Expected PEPE output (formatted):",
-            formatUnits(expectedOutput, 18)
-          );
-          console.log("🔍 PEPE Reserve check (raw):", reserveCheck.toString());
         }
 
         // Check if DEX has enough liquidity
         if (reserveCheck < expectedOutput) {
-          console.log("❌ LIQUIDITY CHECK FAILED:");
-          console.log(
-            "   Required:",
-            formatUnits(expectedOutput, toToken.decimals),
-            toToken.symbol
-          );
-          console.log(
-            "   Available:",
-            formatUnits(reserveCheck, toToken.decimals),
-            toToken.symbol
-          );
-
-          throw new Error(
-            `DEX has insufficient ${
-              toToken.symbol
-            } liquidity. Required: ${formatUnits(
-              expectedOutput,
-              toToken.decimals
-            )} ${toToken.symbol}, Available: ${formatUnits(
-              reserveCheck,
-              toToken.decimals
-            )} ${toToken.symbol}`
-          );
+          throw new Error(`DEX has insufficient ${toToken.symbol} liquidity.`);
         }
-
-        console.log("✅ LIQUIDITY CHECK PASSED:");
-        console.log(
-          "   Required:",
-          formatUnits(expectedOutput, toToken.decimals),
-          toToken.symbol
-        );
-        console.log(
-          "   Available:",
-          formatUnits(reserveCheck, toToken.decimals),
-          toToken.symbol
-        );
 
         // 1. Gasless approval
         console.log("1️⃣ Gasless approval...");
@@ -548,20 +492,9 @@ export function useSmartAccount() {
           confirmations: 1,
         });
 
-        // Verify allowance
-        const allowance = (await publicClient.readContract({
-          address: fromToken.address,
-          abi: erc20Abi,
-          functionName: "allowance",
-          args: [smartAccountAddress, DEX_CONTRACT as Address],
-        })) as bigint;
-        console.log(
-          "✅ Allowance confirmed:",
-          formatUnits(allowance, fromToken.decimals)
-        );
-
         // 2. Gasless swap with correct function
         console.log("2️⃣ Gasless swap...");
+
         let swapData: `0x${string}`;
 
         if (isPepeToUsdc) {
@@ -585,7 +518,7 @@ export function useSmartAccount() {
 
         console.log("🎉 Swap successful! Tx:", txHash);
 
-        // Immediate balance refresh (more aggressive)
+        // Immediate balance refresh
         setTimeout(() => {
           console.log("🔄 Refreshing balances (first attempt)...");
           fetchBalances();
@@ -643,5 +576,7 @@ export function useSmartAccount() {
     isGasless: !!kernelClient,
     paymasterActive: !!kernelClient,
     signerAddress: embeddedWallet?.address as Address | null,
+    showSigningInfo,
+    setShowSigningInfo,
   };
 }

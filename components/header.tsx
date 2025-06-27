@@ -7,7 +7,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 export function Header() {
   return (
     <header className='border-b'>
-      <div className='container flex h-16 items-center justify-between px-24'>
+      <div className='max-w-7xl mx-auto flex h-16 items-center justify-between py-10 px-6'>
         <Link
           href='/'
           className='flex items-center gap-3 hover:opacity-80 transition-opacity'
@@ -23,7 +23,7 @@ export function Header() {
           </div>
           <span className='text-xl font-bold tracking-tight'>Gasless Swap</span>
         </Link>
-        <div className='pr-2'>
+        <div>
           <ModeToggle />
         </div>
       </div>

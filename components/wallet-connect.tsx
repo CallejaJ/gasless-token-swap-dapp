@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useSmartAccount } from "@/hooks/use-smart-account";
+import { onBalanceUpdate } from "@/lib/events";
 
 export function WalletConnect() {
   const { ready, authenticated, user, login, logout } = usePrivy();
@@ -35,6 +37,18 @@ export function WalletConnect() {
     error,
     signerAddress,
   } = useSmartAccount();
+
+  // Listen for balance update events
+  useEffect(() => {
+    if (smartAccountAddress) {
+      const cleanup = onBalanceUpdate(() => {
+        console.log("📊 Balance update event received in WalletConnect");
+        // The balances will automatically update through the hook
+      });
+
+      return cleanup;
+    }
+  }, [smartAccountAddress]);
 
   // Show loading state while Privy is initializing
   if (!ready) {
@@ -102,18 +116,6 @@ export function WalletConnect() {
             Connected Wallet
           </span>
           <div className='flex gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={fetchBalances}
-              disabled={isLoadingBalances || !smartAccountAddress}
-            >
-              {isLoadingBalances ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
-              ) : (
-                <RefreshCw className='h-4 w-4' />
-              )}
-            </Button>
             <Button variant='outline' size='sm' onClick={logout}>
               Disconnect
             </Button>
@@ -136,8 +138,8 @@ export function WalletConnect() {
                   </div>
                   <p className='text-xs text-yellow-600 dark:text-yellow-300 mt-1'>
                     You're using an external wallet (MetaMask, etc). To enable
-                    gasless transactions with ZeroDev, please disconnect and reconnect using
-                    Privy's embedded wallet option.
+                    gasless transactions with ZeroDev, please disconnect and
+                    reconnect using Privy's embedded wallet option.
                   </p>
                 </div>
               </div>
@@ -150,7 +152,8 @@ export function WalletConnect() {
               <div className='flex items-center gap-2 text-sm text-green-800 dark:text-green-200'>
                 <CheckCircle className='h-4 w-4' />
                 <span>
-                  Embedded wallet active - ZeroDev OFFICIAL v5.4 gasless transactions enabled!
+                  Embedded wallet active - ZeroDev OFFICIAL v5.4 gasless
+                  transactions enabled!
                 </span>
               </div>
             </div>
@@ -233,22 +236,28 @@ export function WalletConnect() {
             )}
 
             {/* ✅ Show address comparison if both exist */}
-            {smartAccountAddress && signerAddress && smartAccountAddress !== signerAddress && (
-              <div className='p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-xs'>
-                <p className='text-green-700 dark:text-green-300'>
-                  ✅ Account Abstraction working: Smart Account has different address than signer
-                </p>
-              </div>
-            )}
+            {smartAccountAddress &&
+              signerAddress &&
+              smartAccountAddress !== signerAddress && (
+                <div className='p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-xs'>
+                  <p className='text-green-700 dark:text-green-300'>
+                    ✅ Account Abstraction working: Smart Account has different
+                    address than signer
+                  </p>
+                </div>
+              )}
 
             {/* ❌ Warning if addresses are the same */}
-            {smartAccountAddress && signerAddress && smartAccountAddress === signerAddress && (
-              <div className='p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs'>
-                <p className='text-red-700 dark:text-red-300'>
-                  ❌ Warning: Addresses should be different for Account Abstraction
-                </p>
-              </div>
-            )}
+            {smartAccountAddress &&
+              signerAddress &&
+              smartAccountAddress === signerAddress && (
+                <div className='p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs'>
+                  <p className='text-red-700 dark:text-red-300'>
+                    ❌ Warning: Addresses should be different for Account
+                    Abstraction
+                  </p>
+                </div>
+              )}
 
             <div className='flex justify-between items-center'>
               <span className='text-sm text-muted-foreground'>
@@ -300,58 +309,57 @@ export function WalletConnect() {
           {/* Token Balances - only show if smart account is ready */}
           {smartAccountAddress && (
             <div className='space-y-3'>
-              <div className='text-sm text-muted-foreground'>
-                ZeroDev OFFICIAL v5.4 Smart Account Balances
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-muted-foreground'>
+                  ZeroDev OFFICIAL v5.4 Smart Account Balances
+                </span>
+                {isLoadingBalances && (
+                  <Loader2 className='h-3 w-3 animate-spin text-muted-foreground' />
+                )}
               </div>
-              {isLoadingBalances ? (
-                <div className='flex items-center justify-center p-4'>
-                  <Loader2 className='h-4 w-4 animate-spin mr-2' />
-                  <span className='text-sm'>Loading balances...</span>
-                </div>
-              ) : (
-                <div className='space-y-3'>
-                  {/* PEPE Token */}
-                  <div className='flex items-center justify-between p-3 border rounded-md bg-card'>
-                    <div className='flex-1'>
-                      <div className='flex items-center justify-between'>
-                        <span className='font-medium'>PEPE</span>
-                        <span className='text-sm font-mono'>
-                          {parseFloat(
-                            balances[tokens.PEPE.address] || "0"
-                          ).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className='text-xs text-muted-foreground mt-1'>
-                        Mock Pepe Token
-                      </div>
+              <div className='space-y-3'>
+                {/* PEPE Token */}
+                <div className='flex items-center justify-between p-3 border rounded-md bg-card'>
+                  <div className='flex-1'>
+                    <div className='flex items-center justify-between'>
+                      <span className='font-medium'>PEPE</span>
+                      <span className='text-sm font-mono'>
+                        {parseFloat(
+                          balances[tokens.PEPE.address] || "0"
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className='text-xs text-muted-foreground mt-1'>
+                      Mock Pepe Token
                     </div>
                   </div>
+                </div>
 
-                  {/* USDC Token */}
-                  <div className='flex items-center justify-between p-3 border rounded-md bg-card'>
-                    <div className='flex-1'>
-                      <div className='flex items-center justify-between'>
-                        <span className='font-medium'>USDC</span>
-                        <span className='text-sm font-mono'>
-                          {parseFloat(
-                            balances[tokens.USDC.address] || "0"
-                          ).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className='text-xs text-muted-foreground mt-1'>
-                        Mock USD Coin
-                      </div>
+                {/* USDC Token */}
+                <div className='flex items-center justify-between p-3 border rounded-md bg-card'>
+                  <div className='flex-1'>
+                    <div className='flex items-center justify-between'>
+                      <span className='font-medium'>USDC</span>
+                      <span className='text-sm font-mono'>
+                        {parseFloat(
+                          balances[tokens.USDC.address] || "0"
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className='text-xs text-muted-foreground mt-1'>
+                      Mock USD Coin
                     </div>
                   </div>
-
-                  {/* Info about tokens */}
-                  <div className='mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs'>
-                    <p className='text-blue-700 dark:text-blue-300'>
-                      💡 Use testnet faucets to get tokens for testing ZeroDev OFFICIAL v5.4
-                    </p>
-                  </div>
                 </div>
-              )}
+
+                {/* Info about tokens */}
+                <div className='mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs'>
+                  <p className='text-blue-700 dark:text-blue-300'>
+                    💡 Use testnet faucets to get tokens for testing ZeroDev
+                    OFFICIAL v5.4
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -359,7 +367,8 @@ export function WalletConnect() {
           {isSmartWalletReady && (
             <div className='p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md'>
               <div className='text-sm text-green-800 dark:text-green-200'>
-                ✅ ZeroDev OFFICIAL v5.4 Smart Account ready! All transactions will be gasless and sponsored by the paymaster.
+                ✅ ZeroDev OFFICIAL v5.4 Smart Account ready! All transactions
+                will be gasless and sponsored by the paymaster.
               </div>
             </div>
           )}

@@ -51,16 +51,15 @@ export function PrivyProviderWrapper({
 
           embeddedWallets: {
             createOnLogin: "users-without-wallets",
+            requireUserPasswordOnCreate: false,
+            showWalletUIs: false,
           },
 
           defaultChain: sepolia,
           supportedChains: [sepolia],
 
-          // ✅ Basic login methods
           loginMethods: ["email", "wallet"],
 
-          // ✅ If you need to disable signature prompts, use this instead:
-          // (Optional - only uncomment if necessary)
           mfa: {
             noPromptOnMfaRequired: false,
           },
