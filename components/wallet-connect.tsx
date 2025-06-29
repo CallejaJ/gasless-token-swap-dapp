@@ -20,8 +20,7 @@ import {
   AlertTriangle,
   CheckCircle,
 } from "lucide-react";
-import { useSmartAccount } from "@/hooks/use-smart-account";
-import { onBalanceUpdate } from "@/lib/events";
+import { useSmartAccount } from "@/contexts/SmartAccountContext";
 
 export function WalletConnect() {
   const { ready, authenticated, user, login, logout } = usePrivy();
@@ -38,17 +37,10 @@ export function WalletConnect() {
     signerAddress,
   } = useSmartAccount();
 
-  // Listen for balance update events
+  // Debugging: Log user and wallet info
   useEffect(() => {
-    if (smartAccountAddress) {
-      const cleanup = onBalanceUpdate(() => {
-        console.log("📊 Balance update event received in WalletConnect");
-        // The balances will automatically update through the hook
-      });
-
-      return cleanup;
-    }
-  }, [smartAccountAddress]);
+    console.log("Updated balances:", balances);
+  }, [balances]);
 
   // Show loading state while Privy is initializing
   if (!ready) {
@@ -94,7 +86,7 @@ export function WalletConnect() {
     );
   }
 
-  // ✅ Detect embedded wallet vs injected wallets
+  // Detect embedded wallet vs injected wallets
   const embeddedWallet = wallets?.find(
     (wallet) =>
       wallet.walletClientType === "privy" && wallet.connectorType === "embedded"
@@ -106,6 +98,32 @@ export function WalletConnect() {
   const hasEmbeddedWallet = !!embeddedWallet;
   const needsEmbeddedWallet =
     !hasEmbeddedWallet && injectedWallets && injectedWallets.length > 0;
+
+  // Función para renderizar los balances de tokens
+  const renderTokenBalance = (
+    token: typeof tokens.PEPE | typeof tokens.USDC
+  ) => {
+    const balance = balances[token.address] || "0";
+    return (
+      <div
+        key={token.symbol}
+        className='flex items-center justify-between p-3 border rounded-md bg-card'
+      >
+        <div className='flex-1'>
+          <div className='flex items-center justify-between'>
+            <span className='font-medium'>{token.symbol}</span>
+            <span className='text-sm font-mono'>
+              {parseFloat(balance).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: token.decimals,
+              })}
+            </span>
+          </div>
+          <div className='text-xs text-muted-foreground mt-1'>{token.name}</div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card className='w-full mb-6'>
@@ -125,9 +143,10 @@ export function WalletConnect() {
           Your wallet is connected on Sepolia Testnet with ZeroDev OFFICIAL v5.4
         </CardDescription>
       </CardHeader>
+
       <CardContent>
         <div className='space-y-4'>
-          {/* ✅ Wallet Type Warning */}
+          {/* Wallet Type Warning */}
           {needsEmbeddedWallet && (
             <div className='p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md'>
               <div className='flex items-start gap-2'>
@@ -146,7 +165,7 @@ export function WalletConnect() {
             </div>
           )}
 
-          {/* ✅ Embedded Wallet Success */}
+          {/* Embedded Wallet Success */}
           {hasEmbeddedWallet && (
             <div className='p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md'>
               <div className='flex items-center gap-2 text-sm text-green-800 dark:text-green-200'>
@@ -159,7 +178,7 @@ export function WalletConnect() {
             </div>
           )}
 
-          {/* User Info */}
+          {/* User Info Section */}
           <div className='space-y-2'>
             <div className='flex justify-between items-center'>
               <span className='text-sm text-muted-foreground'>Email</span>
@@ -168,7 +187,7 @@ export function WalletConnect() {
               </span>
             </div>
 
-            {/* ✅ Show signer wallet info (embedded wallet) */}
+            {/* Signer Wallet Info */}
             {hasEmbeddedWallet && (
               <div className='flex justify-between items-center'>
                 <span className='text-sm text-muted-foreground'>
@@ -186,22 +205,22 @@ export function WalletConnect() {
               </div>
             )}
 
-            {/* ✅ Show injected wallets as inactive */}
-            {injectedWallets &&
-              injectedWallets.map((wallet, index) => (
-                <div key={index} className='flex justify-between items-center'>
-                  <span className='text-sm text-muted-foreground'>
-                    External Wallet (Inactive)
+            {/* Injected Wallets */}
+            {injectedWallets?.map((wallet, index) => (
+              <div key={index} className='flex justify-between items-center'>
+                <span className='text-sm text-muted-foreground'>
+                  External Wallet (Inactive)
+                </span>
+                <span className='text-sm font-mono text-muted-foreground'>
+                  {formatAddress(wallet.address)}
+                  <span className='text-xs ml-2 text-yellow-600'>
+                    No gasless
                   </span>
-                  <span className='text-sm font-mono text-muted-foreground'>
-                    {formatAddress(wallet.address)}
-                    <span className='text-xs ml-2 text-yellow-600'>
-                      No gasless
-                    </span>
-                  </span>
-                </div>
-              ))}
+                </span>
+              </div>
+            ))}
 
+            {/* Smart Account Info */}
             {smartAccountAddress ? (
               <div className='flex justify-between items-center'>
                 <span className='text-sm text-muted-foreground'>
@@ -235,30 +254,26 @@ export function WalletConnect() {
               </div>
             )}
 
-            {/* ✅ Show address comparison if both exist */}
+            {/* Address Comparison */}
             {smartAccountAddress &&
               signerAddress &&
-              smartAccountAddress !== signerAddress && (
+              (smartAccountAddress !== signerAddress ? (
                 <div className='p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-xs'>
                   <p className='text-green-700 dark:text-green-300'>
                     ✅ Account Abstraction working: Smart Account has different
                     address than signer
                   </p>
                 </div>
-              )}
-
-            {/* ❌ Warning if addresses are the same */}
-            {smartAccountAddress &&
-              signerAddress &&
-              smartAccountAddress === signerAddress && (
+              ) : (
                 <div className='p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs'>
                   <p className='text-red-700 dark:text-red-300'>
                     ❌ Warning: Addresses should be different for Account
                     Abstraction
                   </p>
                 </div>
-              )}
+              ))}
 
+            {/* Account Type */}
             <div className='flex justify-between items-center'>
               <span className='text-sm text-muted-foreground'>
                 Account Type
@@ -272,6 +287,7 @@ export function WalletConnect() {
               </span>
             </div>
 
+            {/* Paymaster Status */}
             <div className='flex justify-between items-center'>
               <span className='text-sm text-muted-foreground'>
                 Paymaster Status
@@ -306,64 +322,42 @@ export function WalletConnect() {
             </div>
           )}
 
-          {/* Token Balances - only show if smart account is ready */}
+          {/* Token Balances Section */}
           {smartAccountAddress && (
             <div className='space-y-3'>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>
                   ZeroDev OFFICIAL v5.4 Smart Account Balances
                 </span>
-                {isLoadingBalances && (
-                  <Loader2 className='h-3 w-3 animate-spin text-muted-foreground' />
-                )}
+                <button
+                  onClick={fetchBalances}
+                  disabled={isLoadingBalances}
+                  className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
+                  title='Refresh balances'
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${
+                      isLoadingBalances ? "animate-spin" : ""
+                    }`}
+                  />
+                </button>
               </div>
+
               <div className='space-y-3'>
-                {/* PEPE Token */}
-                <div className='flex items-center justify-between p-3 border rounded-md bg-card'>
-                  <div className='flex-1'>
-                    <div className='flex items-center justify-between'>
-                      <span className='font-medium'>PEPE</span>
-                      <span className='text-sm font-mono'>
-                        {parseFloat(
-                          balances[tokens.PEPE.address] || "0"
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className='text-xs text-muted-foreground mt-1'>
-                      Mock Pepe Token
-                    </div>
-                  </div>
-                </div>
+                {Object.values(tokens).map(renderTokenBalance)}
+              </div>
 
-                {/* USDC Token */}
-                <div className='flex items-center justify-between p-3 border rounded-md bg-card'>
-                  <div className='flex-1'>
-                    <div className='flex items-center justify-between'>
-                      <span className='font-medium'>USDC</span>
-                      <span className='text-sm font-mono'>
-                        {parseFloat(
-                          balances[tokens.USDC.address] || "0"
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className='text-xs text-muted-foreground mt-1'>
-                      Mock USD Coin
-                    </div>
-                  </div>
-                </div>
-
-                {/* Info about tokens */}
-                <div className='mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs'>
-                  <p className='text-blue-700 dark:text-blue-300'>
-                    💡 Use testnet faucets to get tokens for testing ZeroDev
-                    OFFICIAL v5.4
-                  </p>
-                </div>
+              {/* Token Info */}
+              <div className='mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs'>
+                <p className='text-blue-700 dark:text-blue-300'>
+                  💡 Use testnet faucets to get tokens for testing ZeroDev
+                  OFFICIAL v5.4
+                </p>
               </div>
             </div>
           )}
 
-          {/* Ready status */}
+          {/* Ready Status */}
           {isSmartWalletReady && (
             <div className='p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md'>
               <div className='text-sm text-green-800 dark:text-green-200'>

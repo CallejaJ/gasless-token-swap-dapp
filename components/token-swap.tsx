@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Shield, RotateCcw } from "lucide-react";
-import { useSmartAccount } from "@/hooks/use-smart-account";
+import { useSmartAccount } from "@/contexts/SmartAccountContext";
 import { parseUnits } from "viem";
 import { toast } from "sonner";
 import { SigningModal } from "@/components/signing-modal";

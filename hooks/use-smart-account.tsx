@@ -15,7 +15,6 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { erc20Abi } from "abitype/abis";
-import { emitBalanceUpdate } from "@/lib/events"; // Add this import
 
 // ✅ CORRECTED IMPORTS for permissionless@0.2.10 + ZeroDev
 import {
@@ -116,11 +115,8 @@ export function useSmartAccount() {
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [kernelClient, setKernelClient] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(false);
-
-  // 🎨 Simple signing info state
   const [showSigningInfo, setShowSigningInfo] = useState(false);
 
-  // ✅ Public client
   const publicClient = useMemo(() => {
     return createPublicClient({
       chain: sepolia,
@@ -128,7 +124,6 @@ export function useSmartAccount() {
     });
   }, []);
 
-  // ✅ Get embedded wallet from Privy
   const embeddedWallet = useMemo(() => {
     return wallets.find((wallet) => wallet.walletClientType === "privy");
   }, [wallets]);
@@ -312,48 +307,43 @@ export function useSmartAccount() {
       setIsLoadingBalances(true);
       console.log("🔄 Fetching balances for:", smartAccountAddress);
 
-      const newBalances: Record<string, string> = {};
+      const [pepeBalance, usdcBalance] = await Promise.all([
+        publicClient.readContract({
+          address: PEPE_ADDRESS as Address,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [smartAccountAddress],
+        }),
+        publicClient.readContract({
+          address: USDC_ADDRESS as Address,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [smartAccountAddress],
+        }),
+      ]);
 
-      // PEPE balance
-      const pepeContract = getContract({
-        address: PEPE_ADDRESS as Address,
-        abi: erc20Abi,
-        client: publicClient,
+      const newBalances = {
+        [PEPE_ADDRESS]: formatUnits(
+          pepeBalance as bigint,
+          TOKENS.PEPE.decimals
+        ),
+        [USDC_ADDRESS]: formatUnits(
+          usdcBalance as bigint,
+          TOKENS.USDC.decimals
+        ),
+      };
+
+      setBalances((prev) => {
+        // Solo actualiza si hay cambios
+        if (JSON.stringify(prev) !== JSON.stringify(newBalances)) {
+          console.log("🔄 Balances actualizados:", newBalances);
+          return newBalances;
+        }
+        return prev;
       });
-      const pepeBalance = (await pepeContract.read.balanceOf([
-        smartAccountAddress,
-      ])) as bigint;
-      newBalances[PEPE_ADDRESS] = formatUnits(
-        pepeBalance,
-        TOKENS.PEPE.decimals
-      );
-      console.log("✅ PEPE balance:", newBalances[PEPE_ADDRESS]);
-
-      // USDC balance
-      const usdcContract = getContract({
-        address: USDC_ADDRESS as Address,
-        abi: erc20Abi,
-        client: publicClient,
-      });
-      const usdcBalance = (await usdcContract.read.balanceOf([
-        smartAccountAddress,
-      ])) as bigint;
-      newBalances[USDC_ADDRESS] = formatUnits(
-        usdcBalance,
-        TOKENS.USDC.decimals
-      );
-      console.log("✅ USDC balance:", newBalances[USDC_ADDRESS]);
-
-      setBalances(newBalances);
-
-      // Emit event to notify other components
-      emitBalanceUpdate();
-    } catch (err) {
-      console.error("❌ Balance fetch failed:", err);
-      setBalances({
-        [PEPE_ADDRESS]: "0.0",
-        [USDC_ADDRESS]: "0.0",
-      });
+    } catch (error) {
+      console.error("❌ Failed to fetch balances:", error);
+      setError("Failed to fetch balances");
     } finally {
       setIsLoadingBalances(false);
     }
@@ -414,135 +404,91 @@ export function useSmartAccount() {
     [executeTransaction]
   );
 
-  // ✅ BIDIRECTIONAL gasless swap with improved balance refresh
+  // ✅ BIDIRECTIONAL gasless swap with robust balance refresh
   const executeSwap = useCallback(
     async (fromToken: Token, toToken: Token, amount: bigint) => {
       if (!kernelClient || !smartAccountAddress) {
         throw new Error("Kernel client not ready");
       }
 
-      // Determine swap direction
       const isPepeToUsdc =
         fromToken.symbol === "PEPE" && toToken.symbol === "USDC";
       const isUsdcToPepe =
         fromToken.symbol === "USDC" && toToken.symbol === "PEPE";
 
       if (!isPepeToUsdc && !isUsdcToPepe) {
-        throw new Error(
-          "Invalid token pair. Only PEPE ↔ USDC swaps are supported."
-        );
+        throw new Error("Invalid token pair");
       }
 
-      console.log("🔄 Starting gasless swap...");
-      console.log("   From:", fromToken.symbol, fromToken.address);
-      console.log("   To:", toToken.symbol, toToken.address);
-      console.log(
-        "   Amount:",
-        formatUnits(amount, fromToken.decimals),
-        fromToken.symbol
-      );
-
       try {
-        // 0. Verify DEX reserves
-        const dexReserves = (await publicClient.readContract({
-          address: DEX_CONTRACT as Address,
-          abi: dexAbi,
-          functionName: "getReserves",
-        })) as readonly [bigint, bigint];
-
-        console.log("📊 DEX Reserves (formatted):");
-        console.log("   PEPE:", formatUnits(dexReserves[0], 18));
-        console.log("   USDC:", formatUnits(dexReserves[1], 6));
-
-        // Calculate expected output based on direction
-        let expectedOutput: bigint;
-        let reserveCheck: bigint;
-
-        if (isPepeToUsdc) {
-          expectedOutput = (await publicClient.readContract({
+        // 1. Verificar liquidez
+        const [dexReserves, expectedOutput] = await Promise.all([
+          publicClient.readContract({
             address: DEX_CONTRACT as Address,
             abi: dexAbi,
-            functionName: "calculatePepeToUsdc",
-            args: [amount],
-          })) as bigint;
-          reserveCheck = dexReserves[1]; // USDC reserve
-        } else {
-          expectedOutput = (await publicClient.readContract({
-            address: DEX_CONTRACT as Address,
-            abi: dexAbi,
-            functionName: "calculateUsdcToPepe",
-            args: [amount],
-          })) as bigint;
-          reserveCheck = dexReserves[0]; // PEPE reserve
+            functionName: "getReserves",
+          }) as Promise<readonly [bigint, bigint]>,
+          isPepeToUsdc
+            ? publicClient.readContract({
+                address: DEX_CONTRACT as Address,
+                abi: dexAbi,
+                functionName: "calculatePepeToUsdc",
+                args: [amount],
+              })
+            : publicClient.readContract({
+                address: DEX_CONTRACT as Address,
+                abi: dexAbi,
+                functionName: "calculateUsdcToPepe",
+                args: [amount],
+              }),
+        ]);
+
+        // Verificar liquidez
+        const reserveCheck = isPepeToUsdc ? dexReserves[1] : dexReserves[0];
+        if (reserveCheck < (expectedOutput as bigint)) {
+          throw new Error(`Insufficient ${toToken.symbol} liquidity`);
         }
 
-        // Check if DEX has enough liquidity
-        if (reserveCheck < expectedOutput) {
-          throw new Error(`DEX has insufficient ${toToken.symbol} liquidity.`);
-        }
-
-        // 1. Gasless approval
-        console.log("1️⃣ Gasless approval...");
+        // 2. Aprobación
         const approvalTx = await executeApproval(fromToken.address, amount);
-        console.log("✅ Approval tx:", approvalTx);
-
-        // Wait for approval confirmation
         await publicClient.waitForTransactionReceipt({
           hash: approvalTx,
           confirmations: 1,
         });
 
-        // 2. Gasless swap with correct function
-        console.log("2️⃣ Gasless swap...");
-
-        let swapData: `0x${string}`;
-
-        if (isPepeToUsdc) {
-          swapData = encodeFunctionData({
-            abi: dexAbi,
-            functionName: "swapPepeToUsdc",
-            args: [amount],
-          });
-        } else {
-          swapData = encodeFunctionData({
-            abi: dexAbi,
-            functionName: "swapUsdcToPepe",
-            args: [amount],
-          });
-        }
+        // 3. Swap
+        const swapData = encodeFunctionData({
+          abi: dexAbi,
+          functionName: isPepeToUsdc ? "swapPepeToUsdc" : "swapUsdcToPepe",
+          args: [amount],
+        });
 
         const txHash = await executeTransaction(
           DEX_CONTRACT as Address,
           swapData
         );
 
-        console.log("🎉 Swap successful! Tx:", txHash);
+        // 4. Actualizar balances
+        await new Promise((resolve) => setTimeout(resolve, 3000)); // Esperar 3 segundos
+        await fetchBalances();
 
-        // Immediate balance refresh
-        setTimeout(() => {
-          console.log("🔄 Refreshing balances (first attempt)...");
-          fetchBalances();
-        }, 1000);
-
-        // Second refresh after more confirmations
-        setTimeout(() => {
-          console.log("🔄 Refreshing balances (second attempt)...");
-          fetchBalances();
-        }, 5000);
+        // Verificación adicional después de 10 segundos
+        setTimeout(() => fetchBalances(), 10000);
 
         return txHash;
       } catch (error) {
-        console.error("❌ Gasless swap failed:", error);
+        console.error("❌ Swap failed:", error);
+        await fetchBalances(); // Intentar actualizar balances incluso si falla
         throw error;
       }
     },
     [
       kernelClient,
+      smartAccountAddress,
       executeTransaction,
       executeApproval,
-      fetchBalances,
       publicClient,
-      smartAccountAddress,
+      fetchBalances,
     ]
   );
 
